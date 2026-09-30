@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#0b0e14" />
+<meta name="description" content="Upload a dataset, anonymize it to a k-anonymity, l-diversity and t-closeness budget, and audit the privacy / data-utility trade-off. Runs entirely in your browser — nothing is uploaded." />
+<meta name="robots" content="index, follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Anonymity Lab — k-anonymity · l-diversity · t-closeness" />
+<meta property="og:description" content="Anonymize a dataset to a k-anonymity / l-diversity / t-closeness budget and audit the privacy vs. data-utility trade-off, entirely in the browser." />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0e14'/%3E%3Cpath d='M16 4l9 3.6v7.2c0 5.6-3.7 10.4-9 12.2-5.3-1.8-9-6.6-9-12.2V7.6L16 4z' fill='none' stroke='%235ad1ff' stroke-width='2'/%3E%3Cpath d='M11.5 15.5l3.2 3.2 6-6.4' fill='none' stroke='%233ddc97' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<title>Anonymity Lab — k-anonymity · l-diversity · t-closeness</title>
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#111621; --panel:#151b28; --panel2:#1b2231;
+    --line:#26304a; --txt:#e6ebf5; --muted:#8d9ab4; --dim:#5f6c86;
+    --acc:#5ad1ff; --acc2:#7c8cff; --ok:#3ddc97; --warn:#ffb454; --bad:#ff6b81;
+    --qi:#5ad1ff; --sa:#c792ea; --chg:#ffb454;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 700px at 12% -10%,#16203a 0%,transparent 60%),
+               radial-gradient(1000px 600px at 100% 0%,#1a1630 0%,transparent 55%),
+               var(--bg);
+    color:var(--txt);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 80px;
+  }
+  a{color:var(--acc)}
+  .wrap{max-width:1420px;margin:0 auto;padding:0 22px}
+  header.top{
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(21,27,40,.85),rgba(11,14,20,.6));
+    backdrop-filter:blur(8px);
+    position:sticky;top:0;z-index:20;
+  }
+  header.top .wrap{display:flex;align-items:center;gap:16px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
+  h1{font-size:19px;margin:0;letter-spacing:.2px;font-weight:650}
+  h1 .k{color:var(--acc)}
+  h1 .l{color:var(--sa)}
+  h1 .t{color:var(--ok)}
+  .sub{color:var(--muted);font-size:12.5px}
+  .spacer{flex:1}
+  .pill{
+    font-size:11.5px;color:var(--muted);border:1px solid var(--line);
+    padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.02);white-space:nowrap
+  }
+  .pill.good{color:var(--ok);border-color:rgba(61,220,151,.35)}
+  h2{font-size:15px;margin:0 0 12px;font-weight:620;letter-spacing:.2px;display:flex;align-items:center;gap:9px}
+  h2::before{content:"";width:3px;height:15px;border-radius:2px;background:linear-gradient(180deg,var(--acc),var(--acc2))}
+  h3{font-size:12.5px;margin:0 0 10px;color:var(--muted);font-weight:600;letter-spacing:.35px;text-transform:uppercase}
+  .panel{
+    background:linear-gradient(180deg,var(--panel),#121722);
+    border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0;
+    box-shadow:0 10px 30px -22px #000;
+  }
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+  label.fld{display:block;margin:0 0 12px}
+  label.fld > span.lab{display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px;letter-spacing:.3px;text-transform:uppercase}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;background:#0d1119;border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:9px 10px;font-size:13.5px;font-family:inherit;outline:none
+  }
+  textarea{font-family:var(--mono);font-size:12px;resize:vertical}
+  input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(90,209,255,.12)}
+  input[type=range]{width:100%;accent-color:var(--acc)}
+  button{
+    background:linear-gradient(180deg,#2b3550,#1e263a);color:var(--txt);border:1px solid var(--line);
+    padding:9px 14px;border-radius:9px;cursor:pointer;font:inherit;font-weight:560;font-size:13px
+  }
+  button:hover{border-color:#3a476b;background:linear-gradient(180deg,#33405f,#232c44)}
+  button.primary{
+    background:linear-gradient(180deg,#1d7fa8,#14607f);border-color:#2ea6cf;color:#eaf9ff;
+    padding:11px 22px;font-size:14px
+  }
+  button.primary:hover{background:linear-gradient(180deg,#2494c2,#17708f)}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .drop{
+    border:1.5px dashed #33405e;border-radius:12px;padding:26px;text-align:center;
+    background:rgba(90,209,255,.03);transition:.15s;cursor:pointer
+  }
+  .drop:hover,.drop.over{border-color:var(--acc);background:rgba(90,209,255,.08)}
+  .drop .big{font-size:15px;font-weight:600}
+  .drop .small{color:var(--muted);font-size:12px;margin-top:5px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;
+     position:sticky;top:0;background:#131924;z-index:2;white-space:nowrap}
+  td.num{font-family:var(--mono);text-align:right}
+  tbody tr:hover{background:rgba(255,255,255,.025)}
+  .tscroll{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  .tag{font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .tag.qi{color:var(--qi);border-color:rgba(90,209,255,.4);background:rgba(90,209,255,.08)}
+  .tag.sa{color:var(--sa);border-color:rgba(199,146,234,.4);background:rgba(199,146,234,.08)}
+  .tag.ign{color:var(--dim)}
+  .tag.num{color:var(--acc2);border-color:rgba(124,140,255,.4);background:rgba(124,140,255,.08)}
+  .tag.dat{color:#7f8ba6}
+  .kpi{background:linear-gradient(180deg,var(--panel2),#141a27);border:1px solid var(--line);
+       border-radius:12px;padding:13px 14px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--acc);opacity:.75}
+  .kpi.ok::after{background:var(--ok)} .kpi.warn::after{background:var(--warn)} .kpi.bad::after{background:var(--bad)}
+  .kpi .k-l{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .kpi .k-v{font-size:23px;font-weight:640;font-family:var(--mono);margin:4px 0 2px;letter-spacing:-.5px}
+  .kpi .k-d{font-size:11.5px;color:var(--dim);font-family:var(--mono)}
+  .kpi .k-b{font-size:11.5px;color:var(--dim)}
+  .ba{display:inline-flex;align-items:baseline;gap:6px;font-family:var(--mono)}
+  .ba .b4{color:var(--muted)} .ba .arw{color:var(--dim)} .ba .af{font-weight:650}
+  .verdict{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .vb{padding:8px 14px;border-radius:10px;font-weight:600;font-size:13px;border:1px solid;display:flex;gap:9px;align-items:center}
+  .vb.pass{color:var(--ok);border-color:rgba(61,220,151,.4);background:rgba(61,220,151,.09)}
+  .vb.fail{color:var(--bad);border-color:rgba(255,107,129,.4);background:rgba(255,107,129,.09)}
+  .vb.part{color:var(--warn);border-color:rgba(255,180,84,.4);background:rgba(255,180,84,.09)}
+  .chart{background:#0e131d;border:1px solid var(--line);border-radius:12px;padding:12px 12px 8px}
+  .chart .ct{font-size:12.5px;font-weight:620;margin-bottom:2px}
+  .chart .cs{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:6px}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:2px 0 14px;flex-wrap:wrap}
+  .tabs button{background:transparent;border:none;border-bottom:2px solid transparent;border-radius:0;
+              padding:9px 13px;color:var(--muted);font-size:13px}
+  .tabs button.on{color:var(--txt);border-bottom-color:var(--acc);background:rgba(90,209,255,.05)}
+  .tabc{display:none} .tabc.on{display:block}
+  td.chg{color:var(--chg);background:rgba(255,180,84,.09);font-family:var(--mono)}
+  td.qic{color:var(--qi)} td.sac{color:var(--sa)}
+  tr.supp td{opacity:.42;text-decoration:line-through}
+  .note{font-size:12px;color:var(--muted);background:rgba(90,209,255,.05);border-left:2px solid var(--acc);
+        padding:9px 12px;border-radius:0 8px 8px 0;margin:10px 0}
+  .warnbox{border-left-color:var(--warn);background:rgba(255,180,84,.06)}
+  .log{font-family:var(--mono);font-size:11.5px;max-height:280px;overflow:auto;background:#0b0f17;
+       border:1px solid var(--line);border-radius:10px;padding:10px}
+  .log div{padding:1.5px 0;border-bottom:1px solid rgba(255,255,255,.03);color:#a9b6cf}
+  .log .w{color:var(--warn)} .log .e{color:var(--bad)} .log .g{color:var(--ok)} .log .i{color:var(--acc)}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:rgba(255,255,255,.015);margin:10px 0}
+  summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--txt)}
+  details p,details li{color:var(--muted);font-size:12.5px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+  .cols>div{padding:0 12px 0 0}
+  .cols>div+div{border-left:1px solid var(--line);padding-left:12px;padding-right:0}
+  .hint{font-size:11.5px;color:var(--dim);margin-top:5px}
+  .flexrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .flexrow>*{flex:1;min-width:130px}
+  .flexrow .narrow{flex:0 0 150px}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid rgba(90,209,255,.25);border-top-color:var(--acc);
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .dirty{opacity:.45;pointer-events:none;filter:saturate(.4)}
+  .stripe-odd td{background:rgba(255,255,255,.012)}
+  .badge-v{display:inline-block;padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:11px}
+  .v-ok{background:rgba(61,220,151,.15);color:var(--ok)}
+  .v-bad{background:rgba(255,107,129,.15);color:var(--bad)}
+  code{font-family:var(--mono);background:rgba(90,209,255,.08);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+
+<noscript>
+  <div class="wrap" style="padding-top:16px">
+    <div class="panel"><h2>JavaScript is required</h2>
+      <p class="sub">Anonymity Lab parses your CSV and runs the k-anonymity, l-diversity and t-closeness algorithms locally in JavaScript — there is no server to fall back to. Please enable JavaScript for this page.</p>
+    </div>
+  </div>
+</noscript>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Anonymity&nbsp;Lab — <span class="k">k</span>-anonymity · <span class="l">l</span>-diversity · <span class="t">t</span>-closeness</h1>
+    <div class="sub">Upload a dataset, choose quasi-identifiers &amp; sensitive attributes, anonymize, and audit the privacy / data-utility trade-off.</div>
+    <div class="spacer"></div>
+    <span class="pill good" id="privacyPill">100% in-browser · nothing is uploaded</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel" id="ingest">
+    <h2>1 · Load your data</h2>
+    <div class="grid g2">
+      <div>
+        <div class="drop" id="drop">
+          <div class="big">Drop a CSV here, or click to browse</div>
+          <div class="small">CSV / TSV &middot; up to 50,000 rows &middot; parsed locally, never sent anywhere</div>
+          <input type="file" id="file" accept=".csv,.tsv,.txt,text/csv" class="sr">
+        </div>
+        <div class="flexrow" style="margin-top:12px">
+          <label class="fld" style="margin:0"><span class="lab">First row is a header</span>
+            <select id="hasHeader"><option value="1">Yes — column names</option><option value="0">No — generate names</option></select>
+          </label>
+          <button class="ghost" id="btnSample" style="flex:0 0 auto">Load sample dataset</button>
+          <button class="ghost" id="btnClear" style="flex:0 0 auto">Reset</button>
+        </div>
+        <div class="note" id="ingestInfo">No data loaded yet. <b>Tip:</b> try the sample dataset to see the pipeline immediately.</div>
+      </div>
+      <div>
+        <label class="fld"><span class="lab">Or paste CSV / TSV text</span>
+          <textarea id="paste" rows="7" placeholder="age,zip,sex,disease&#10;34,10014,F,flu&#10;..."></textarea></label>
+        <button id="btnPaste">Parse pasted data</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel dirty" id="configPanel">
+    <h2>2 · Classify the attributes</h2>
+    <div id="colSummary" class="note">Load a dataset to see its columns.</div>
+    <div class="tscroll" style="margin-top:12px;max-height:340px"><table id="colTable"></table></div>
+    <div class="flexrow" style="margin-top:12px">
+      <div class="flexrow" style="flex:2;min-width:260px">
+        <button class="ghost" data-guess="adult">Guess QI (classic adult-style)</button>
+        <button class="ghost" data-guess="clear">Clear all roles</button>
+        <button class="ghost" data-guess="allsa">Everything = sensitive</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel dirty" id="paramPanel">
+    <h2>3 · Set the privacy budget</h2>
+    <div class="grid g2">
+      <div>
+        <h3>Privacy targets</h3>
+        <div class="flexrow">
+          <label class="fld"><span class="lab">k — anonymity</span>
+            <input type="number" id="k" min="1" max="10000" value="5"></label>
+          <label class="fld"><span class="lab">l — diversity</span>
+            <input type="number" id="l" min="1" max="10000" value="3"></label>
+          <label class="fld"><span class="lab">t — closeness</span>
+            <input type="number" id="t" min="0" max="1" step="0.05" value="0.30"></label>
+        </div>
+        <div class="hint">k = smallest equivalence class · l = fewest distinct sensitive values in a class · t = largest class↔global distance (0 = perfect, 1 = worst). Raise a target, lose utility.</div>
+        <h3 style="margin-top:16px">t-closeness distance</h3>
+        <select id="tMetric">
+          <option value="hierarchy">t-closeness hierarchy (Elfakam et al. 2008)</option>
+          <option value="emd">Earth Mover's Distance (ordinal / numeric)</option>
+          <option value="tv">Total variation (unordered)</option>
+        </select>
+        <div class="hint" id="tMetricHint">Hierarchy distance is domain-agnostic and works for categorical and numeric attributes.</div>
+      </div>
+      <div>
+        <h3>Algorithm</h3>
+        <select id="method">
+          <option value="generalization">Full generalization — one hierarchy level per attribute, same for everyone</option>
+          <option value="mondrian">Mondrian — local partitioning, usually the best utility</option>
+          <option value="hybrid">Hybrid — Mondrian, then a global fallback for classes it could not make k-safe</option>
+        </select>
+        <div class="flexrow" style="margin-top:12px">
+          <label class="fld" style="margin:0"><span class="lab">Max categorical groups per class</span>
+            <input type="number" id="maxCat" min="1" max="12" value="4"></label>
+          <label class="fld" style="margin:0"><span class="lab">Hierarchy depth (levels)</span>
+            <input type="number" id="levels" min="2" max="10" value="7"></label>
+        </div>
+        <h3 style="margin-top:16px">Repair stages</h3>
+        <label style="display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;font-size:13px">
+          <input type="checkbox" id="doSuppress" checked style="flex:0 0 auto;margin-top:2px">
+          <span>Suppress records in classes &lt; k <span class="hint" style="display:block">Final safety net for k-anonymity: drops rows, recorded in the suppression log.</span></span></label>
+        <label style="display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;font-size:13px">
+          <input type="checkbox" id="doL" checked style="flex:0 0 auto;margin-top:2px">
+          <span>Enforce l-diversity by <b>data swapping</b> <span class="hint" style="display:block">Exchanges sensitive values between classes so every class reaches l distinct values without breaking k.</span></span></label>
+        <label style="display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;font-size:13px">
+          <input type="checkbox" id="doSuppressL" style="flex:0 0 auto;margin-top:2px">
+          <span>…or drop classes that cannot reach l <span class="hint" style="display:block">Off by default: a class that is 100% one value cannot be repaired by swapping, and suppressing it can delete most of the table. Left off, the violation is reported honestly instead.</span></span></label>
+        <label style="display:flex;gap:9px;align-items:flex-start;font-size:13px">
+          <input type="checkbox" id="doT" checked style="flex:0 0 auto;margin-top:2px">
+          <span>Enforce t-closeness <span class="hint" style="display:block">Greedy, utility-preserving value repair toward the global distribution.</span></span></label>
+        <div class="flexrow" style="margin-top:14px">
+          <button class="primary" id="btnRun" disabled>Anonymize &amp; audit</button>
+          <button class="ghost" id="btnSweep" disabled style="flex:0 0 auto">k-sweep</button>
+          <button class="ghost" id="btnLink" disabled style="flex:0 0 auto" title="Put the current privacy budget and column roles in the address bar, so this exact configuration can be shared or bookmarked">Copy settings link</button>
+        </div>
+        <div id="linkBox" class="hint" style="display:none;margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="results"></div>
+
+  <footer style="margin:26px 0 0;padding:16px 0;border-top:1px solid var(--line);color:var(--dim);font-size:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+    <span><b style="color:var(--muted)">Anonymity Lab</b> — a static page: one HTML file, no build step, no dependencies, no analytics, no cookies.</span>
+    <span>Your file is read with the browser's own FileReader and never leaves this tab — closing it erases everything.</span>
+    <span style="margin-left:auto"><a href="#top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">back to top ↑</a></span>
+  </footer>
+
+  <div class="panel">
+    <h2>Reference · what each metric means</h2>
+    <div class="grid g3">
+      <details open><summary><span class="k">k</span>-anonymity</summary>
+        <p>A dataset is <b>k-anonymous</b> when every combination of quasi-identifiers is shared by at least <code>k</code> records, so no record can be singled out from the rest of its class. Equivalence classes are the distinct QI tuples and their sizes form a distribution; the minimum size is the k that was actually achieved.</p></details>
+      <details><summary><span class="l">l</span>-diversity</summary>
+        <p>k-anonymity alone does not stop <i>attribute</i> disclosure: if every member of a class has the same disease, the class leaks it. <b>l-diversity</b> requires each equivalence class to contain at least <code>l</code> distinct values for every sensitive attribute (this app enforces <i>full</i> l-diversity).</p></details>
+      <details><summary><span class="t">t</span>-closeness</summary>
+        <p>A class whose sensitive distribution is skewed (e.g. 100% one disease) leaks far more than its size suggests. <b>t-closeness</b> bounds the distance between each class's sensitive-attribute distribution and the distribution of the whole table at <code>t</code>.</p></details>
+    </div>
+    <div class="grid g3">
+      <details><summary>Methods implemented</summary>
+        <ul>
+          <li><b>Full generalization</b> — a generalization hierarchy per QI (power-of-two interval widths for numeric, frequency-chunked groups for categorical) and a greedy lattice ascent + local descent that finds the least-generalized lattice satisfying k.</li>
+          <li><b>Mondrian</b> — recursive median partitioning on the widest quasi-identifier, then minimal local generalization of each partition.</li>
+          <li><b>Hybrid</b> — Mondrian first, then a global lattice applied only to the classes it could not make k-safe.</li>
+          <li><b>Data swapping</b> — exchange sensitive values between classes to raise diversity while class sizes (and therefore k) stay intact.</li>
+          <li><b>Value repair</b> — for t-closeness, one value at a time, each swap chosen to cut the worst over-threshold class the most for the least distortion.</li>
+        </ul></details>
+      <details><summary>Utility metrics</summary>
+        <ul>
+          <li><b>Information loss</b> — mean normalized cell precision: interval width / domain range for numeric QIs, hierarchy level / depth for categorical QIs; sensitive-value edits are charged the same way.</li>
+          <li><b>Suppression rate</b> — share of rows removed (and, separately, how many classes had to be dropped to reach l).</li>
+          <li><b>Cardinality reduction</b> — distinct values per column, before vs after: the most intuitive proxy for how much signal survives.</li>
+        </ul></details>
+      <details><summary>Reading the charts</summary>
+        <ul>
+          <li><b>Class-size histogram</b> — the mass must move right of the k line.</li>
+          <li><b>Per-class t-distance</b> — every bar must sit under the t line.</li>
+          <li><b>k-sweep</b> — the classic privacy/utility curve: push k right, information loss rises.</li>
+        </ul></details>
+    </div>
+    <div class="hint">References: Sweeney (2002) k-anonymity; Machanavajjhala et al. (2007) l-diversity; El Emam et al. (2007) t-closeness; Elfakam et al. (2008) t-closeness hierarchy; Mondrian multi-dimensional de-identification; NIST SP 800-188 guidelines.</div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Anonymity Lab — single file, no dependencies
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+function fmt(x, d){
+  if (x === null || x === undefined || !isFinite(x)) return '—';
+  if (typeof x === 'number' && Number.isInteger(x)) return String(x);
+  const n = Number(x);
+  if (!isFinite(n)) return '—';
+  return n.toFixed(d === undefined ? 3 : d);
+}
+function pctf(x, d){ return (100*Number(x)).toFixed(d === undefined ? 1 : d) + '%'; }
+function nf(x){ if(!isFinite(x)) return '—'; return Math.abs(x) >= 1000 ? Math.round(x).toLocaleString() : (Number.isInteger(x)?String(x):x.toFixed(2)); }
+function mean(a){ return a.length ? a.reduce((s,v)=>s+v,0)/a.length : NaN; }
+function entropy(arr){
+  const n = arr.length; if(!n) return 0;
+  const m = new Map(); arr.forEach(v=>m.set(v,(m.get(v)||0)+1));
+  let h = 0; m.forEach(c=>{ const p=c/n; h -= p*Math.log(p); });
+  return h;
+}
+function medianSorted(a){ if(!a.length) return NaN; const s=a.slice().sort((x,y)=>x-y); const m=s.length>>1;
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2; }
+
+/* ---------------- CSV ---------------- */
+function detectDelim(text){
+  const line = text.split(/\r?\n/).find(l=>l.trim().length>0) || '';
+  const cands = [',',';','\t','|'];
+  let best=',', bestN=-1;
+  for (const c of cands){
+    let n=0; for(let i=0;i<line.length;i++) if(line[i]===c) n++;
+    if(n>bestN){ bestN=n; best=c; }
+  }
+  return bestN>0 ? best : ',';
+}
+function parseCSV(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const delim = detectDelim(text);
+  const out=[]; let row=[], field='', q=false, i=0;
+  while(i < text.length){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if(text[i+1] === '"'){ field += '"'; i += 2; continue; } q=false; i++; continue; }
+      field += c; i++; continue;
+    }
+    if (c === '"'){ q=true; i++; continue; }
+    if (c === delim){ row.push(field); field=''; i++; continue; }
+    if (c === '\r'){ i++; continue; }
+    if (c === '\n'){ row.push(field); out.push(row); row=[]; field=''; i++; continue; }
+    field += c; i++;
+  }
+  if (field.length || row.length){ row.push(field); out.push(row); }
+  return out;
+}
+const RE_NUM = /^[+-]?(\d{1,3}(,\d{3})*|\d+)(\.\d+)?([eE][+-]?\d+)?%?$/;
+const RE_DATE = /^\d{4}[-/.]\d{1,2}([-/.]\d{1,2})?([T ]\d{1,2}:\d{2}(:\d{2})?)?$/;
+const RE_DATE2 = /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/;
+function toNumber(v){
+  if (typeof v !== 'string') return v;
+  const s = v.trim().replace(/,/g,'').replace(/%$/,'');
+  if (s === '' || !RE_NUM.test(v.trim())) return NaN;
+  const n = Number(s);
+  return isFinite(n) ? n : NaN;
+}
+function inferType(values){
+  const sample = values.filter(v => v !== '' && v !== null && v !== undefined).slice(0,300);
+  if (!sample.length) return 'categorical';
+  let num = 0, date = 0;
+  for (const v of sample){
+    if (RE_NUM.test(String(v).trim())) num++;
+    else if (RE_DATE.test(String(v).trim()) || RE_DATE2.test(String(v).trim())) date++;
+  }
+  if (num === sample.length) return 'numeric';
+  if (date === sample.length) return 'date';
+  return 'categorical';
+}
+
+const busy = '<span class="spin"></span>';
+
+/* ---------------- state ---------------- */
+const MAXROWS = 50000;
+const state = {
+  headers: [], rawRows: [], types: {}, roles: {}, nrows: 0,
+  result: null, log: [], pendingRoles: null, restored: false
+};
+function logMsg(msg, cls){ state.log.push({msg, cls: cls||''}); }
+function clearLog(){ state.log = []; }
+
+function setData(grid, hasHeader){
+  if (!grid.length) return;
+  let hdr, body;
+  if (hasHeader){
+    hdr = grid[0].map((h,i)=> String(h).trim() || ('col_'+(i+1)));
+    body = grid.slice(1);
+  } else {
+    const w = grid[0].length;
+    hdr = Array.from({length:w},(_,i)=>'col_'+(i+1));
+    body = grid;
+  }
+  if (body.length > MAXROWS) body = body.slice(0, MAXROWS);
+  body = body.filter(r => r.some(c => String(c).trim() !== ''));
+  const n = hdr.length;
+  const rows = body.map(r => {
+    const o = {};
+    for (let j=0;j<n;j++) o[hdr[j]] = r[j] === undefined ? '' : String(r[j]).trim();
+    return o;
+  });
+  state.headers = hdr; state.rawRows = rows; state.nrows = rows.length;
+  state.types = {}; state.roles = {};
+  for (const h of hdr){
+    const vals = rows.map(r => r[h]);
+    state.types[h] = inferType(vals);
+    state.roles[h] = 'ignore';
+  }
+  let fromLink = 0;
+  if (state.pendingRoles){
+    for (const c of state.pendingRoles.qi) if (state.roles[c] !== undefined){ state.roles[c] = 'qi'; fromLink++; }
+    for (const c of state.pendingRoles.sa) if (state.roles[c] !== undefined){ state.roles[c] = 'sa'; fromLink++; }
+    state.pendingRoles = null;
+  }
+  renderColumns(); syncDirty();
+  $('#ingestInfo').innerHTML = 'Loaded <b>'+rows.length.toLocaleString()+'</b> rows × <b>'+n+'</b> columns' +
+    (grid.length-1 > MAXROWS ? ' <span style="color:var(--warn)">(truncated to '+MAXROWS.toLocaleString()+' rows)</span>' : '') +
+    (fromLink ? ' — applied <b>' + fromLink + '</b> column role(s) from the shared link.' : '. Assign roles below.') +
+    (fromLink === 0 && state.restored ? ' The k / l / t budget from the link is already applied below.' : '');
+}
+function qis(){ return state.headers.filter(h => state.roles[h] === 'qi'); }
+function sas(){ return state.headers.filter(h => state.roles[h] === 'sa'); }
+
+function renderColumns(){
+  const counts = {}; state.headers.forEach(h => counts[h] = 0);
+  const uniqCount = {};
+  state.rawRows.forEach(r => state.headers.forEach(h => { if (r[h] !== '') counts[h]++; }));
+  for (const h of state.headers){
+    const u = new Set(); for (let i=0;i<state.nrows && u.size<400;i++){ const v=state.rawRows[i][h]; if(v!=='') u.add(v); }
+    uniqCount[h] = u;
+  }
+  let html = '<thead><tr><th>Column</th><th>Detected type</th><th>Distinct</th><th>Sample values</th><th>Role</th></tr></thead><tbody>';
+  for (const h of state.headers){
+    const t = state.types[h], role = state.roles[h];
+    const uniq = uniqCount[h];
+    const samp = Array.from(uniq).slice(0,5).map(v=>'<span class="tag">'+esc(String(v).slice(0,22))+'</span>').join(' ');
+    const isQ = role==='qi', isS = role==='sa';
+    html += '<tr class="stripe-odd"><td><b>'+esc(h)+'</b><div class="hint">'+counts[h].toLocaleString()+' non-empty</div></td>'+
+      '<td><select data-type="'+esc(h)+'" style="padding:4px 6px;font-size:11.5px">' +
+        ['numeric','categorical','date'].map(x => '<option value="'+x+'"'+(x===t?' selected':'')+'>'+x+'</option>').join('') +
+      '</select>'+(t==='numeric'?'<div class="hint">treated as intervals</div>':'<div class="hint">treated as groups</div>')+'</td>'+
+      '<td class="num">'+(uniq.size>=400?'400+':uniq.size)+'</td>'+
+      '<td style="max-width:330px">'+samp+'</td>'+
+      '<td><div style="display:flex;gap:4px">'+
+        '<button data-role="qi" data-col="'+esc(h)+'" class="tag '+(isQ?'qi':'ign')+'" style="cursor:pointer">QI</button>'+
+        '<button data-role="sa" data-col="'+esc(h)+'" class="tag '+(isS?'sa':'ign')+'" style="cursor:pointer">Sensitive</button>'+
+        '<button data-role="ignore" data-col="'+esc(h)+'" class="tag '+(role==='ignore'?'dat':'ign')+'" style="cursor:pointer">Ignore</button>'+
+      '</div></td></tr>';
+  }
+  $('#colTable').innerHTML = html + '</tbody>';
+  const nq = qis().length, ns = sas().length;
+  const hints = [];
+  for (const h of qiCols()){
+    const z = /zip|postal|code|phone|id\b/i.test(h);
+    if (z && state.types[h] === 'numeric')
+      hints.push('⚠ <b>'+esc(h)+'</b> was detected as numeric but looks like a code — switch it to <i>categorical</i> so it is generalized as groups instead of a number line.');
+  }
+  $('#colSummary').innerHTML =
+    (nq && ns
+      ? 'Selected <span class="tag qi">'+nq+' quasi-identifier'+(nq>1?'s':'')+'</span> <span class="tag sa">'+ns+' sensitive attribute'+(ns>1?'s':'')+'</span> — press <b>Anonymize &amp; audit</b>.'
+      : (nq ? 'Select at least one <span class="tag sa">sensitive attribute</span> to evaluate l-diversity / t-closeness.'
+            : 'Select at least one <span class="tag qi">quasi-identifier</span> to anonymize.')) +
+    (hints.length ? '<div class="note warnbox" style="margin:8px 0 0">'+hints.join('<br>')+'</div>' : '');
+}
+function qiCols(){ return state.headers.filter(h => state.roles[h] === 'qi'); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function syncDirty(){
+  const ready = state.nrows > 0 && qis().length > 0;
+  ['configPanel','paramPanel'].forEach(id => $( '#'+id ).classList.toggle('dirty', !ready));
+  $('#btnRun').disabled = !ready;
+  $('#btnSweep').disabled = !ready;
+}
+
+/* ---------------- generalization hierarchies ---------------- */
+function numHierarchy(values, maxLevels){
+  let mn = Infinity, mx = -Infinity;
+  for (const v of values){ if(v < mn) mn = v; if(v > mx) mx = v; }
+  const span = Math.max(mx - mn, 1e-9);
+  const L = clamp(maxLevels|0, 2, 10);
+  const uniq = Array.from(new Set(values));
+  const levels = [];
+  for (let i=0;i<L;i++){
+    const width = span / Math.pow(2, L-1-i);
+    const nBuckets = Math.max(1, Math.ceil(span / width));
+    const labels = new Array(nBuckets);
+    for (let b=0;b<nBuckets;b++)
+      labels[b] = '[' + nfmt(mn + b*width) + ', ' + nfmt(Math.min(mn + (b+1)*width, mx + width*1e-6)) + ')';
+    const map = new Map();
+    for (const v of uniq){
+      const idx = Math.min(Math.floor((v - mn) / width + 1e-9), nBuckets-1);
+      map.set(v, labels[idx]);
+    }
+    levels.push({kind:'num', width, map, groups: groupMembers(map)});
+  }
+  for (let i=0;i<L-1;i++) levels[i].parent = buildParent(levels[i], levels[i+1]);
+  levels[L-1].parent = null;
+  return {levels, min:mn, max:mx, span, kind:'numeric'};
+}
+function nfmt(x){
+  if (Math.abs(x) >= 1000 || (x !== 0 && Math.abs(x) < 0.001)) return Number(x.toPrecision(4)).toString();
+  return String(Number(x.toFixed(4)));
+}
+function groupMembers(map){
+  const g = new Map();
+  for (const [v, lab] of map){ if(!g.has(lab)) g.set(lab, []); g.get(lab).push(v); }
+  return g;
+}
+function buildParent(lvA, lvB){
+  const p = new Map();
+  for (const [lab, members] of lvA.groups){
+    const rep = lvB.map.get(members[0]);
+    for (const m of members) p.set(m, rep);
+  }
+  return p;
+}
+function catHierarchy(counts, maxLevels){
+  const vals = Array.from(counts.keys()).sort((a,b)=>{
+    const d = counts.get(b) - counts.get(a); return d !== 0 ? d : (a<b?-1:a>b?1:0);
+  });
+  const n = vals.length;
+  const L = clamp(maxLevels|0, 2, 10);
+  const levels = [];
+  const order = vals.slice();
+  for (let i=0;i<L;i++){
+    const chunks = (i === L-1) ? 1 : Math.min(Math.pow(2, i), n);
+    const map = new Map();
+    const per = n / chunks;
+    for (let c=0;c<chunks;c++){
+      const from = Math.floor(c*per), to = Math.max(from+1, Math.floor((c+1)*per));
+      const members = order.slice(from, to);
+      const lab = (i === 0 || chunks === 1) ? (members.length === 1 ? members[0] : (chunks === 1 ? '*' : '*'+c)) : '*'+c;
+      for (const m of members) map.set(m, lab);
+    }
+    levels.push({kind:'cat', map, groups: groupMembers(map), width: chunks});
+  }
+  levels[0].map = new Map(vals.map(v=>[v, v]));
+  levels[0].groups = groupMembers(levels[0].map);
+  for (let i=0;i<L-1;i++) levels[i].parent = buildParent(levels[i], levels[i+1]);
+  levels[L-1].parent = null;
+  return {levels, distinct: n, kind:'categorical', values: vals};
+}
+function buildHierarchy(col, type, maxLevels){
+  const L = clamp(maxLevels|0, 2, 10);
+  const vals = state.rawRows.map(r => r[col]);
+  if (type === 'numeric'){
+    const nums = []; for (const v of vals){ const n = toNumber(v); if(isFinite(n)) nums.push(n); }
+    return numHierarchy(nums, L);
+  }
+  const counts = new Map();
+  for (const v of vals) counts.set(v, (counts.get(v)||0)+1);
+  return catHierarchy(counts, L);
+}
+function generalizerFor(h, level, v){
+  if (h.kind === 'numeric'){ const n = toNumber(v); const lab = h.levels[level].map.get(n); return lab === undefined ? '*' : lab; }
+  const lab = h.levels[level].map.get(v); return lab === undefined ? '*' : lab;
+}
+
+/* ---------------- k-anonymity: Mondrian ---------------- */
+function colValues(qiCols){
+  const out = [];
+  for (const c of qiCols){
+    const numeric = state.types[c] === 'numeric';
+    const col = numeric ? new Float64Array(state.nrows) : new Array(state.nrows);
+    for (let i=0;i<state.nrows;i++) col[i] = numeric ? toNumber(state.rawRows[i][c]) : state.rawRows[i][c];
+    out.push(col);
+  }
+  return out;
+}
+function mondrianParts(hs, k, colVals){
+  const part = [];
+  const D = hs.length;
+  const spread = (idx, dim) => {
+    const col = colVals[dim];
+    if (hs[dim].kind === 'numeric'){
+      let mn=Infinity, mx=-Infinity;
+      for (let t=0;t<idx.length;t++){ const v = col[idx[t]]; if(v<mn)mn=v; if(v>mx)mx=v; }
+      return hs[dim].span > 0 ? (mx-mn)/hs[dim].span : 0;
+    }
+    const c = new Map();
+    for (let t=0;t<idx.length;t++){ const v = col[idx[t]]; c.set(v,(c.get(v)||0)+1); }
+    let mx=0; c.forEach(x=>{ if(x>mx) mx=x; });
+    return idx.length ? 1 - mx/idx.length : 0;
+  };
+  const rec = (depth, idx) => {
+    if (idx.length <= 2*k || depth > 40){ part.push(idx); return; }
+    let dim = -1, best = 0;
+    for (let d=0; d<D; d++){
+      const s = spread(idx, d);
+      if (s > best){ best = s; dim = d; }
+    }
+    if (dim < 0){ part.push(idx); return; }
+    const col = colVals[dim];
+    const sorted = idx.slice().sort(hs[dim].kind === 'numeric' ? (a,b) => col[a] - col[b] : (a,b) => {
+      const va = col[a], vb = col[b]; return va < vb ? -1 : va > vb ? 1 : 0;
+    });
+    const mid = sorted.length >> 1;
+    rec(depth+1, sorted.slice(0,mid));
+    rec(depth+1, sorted.slice(mid));
+  };
+  rec(0, Array.from({length:state.nrows},(_,i)=>i));
+  const sizes = part.map(p=>p.length);
+  const small = sizes.filter(s => s < k).length;
+  logMsg('Mondrian: ' + part.length.toLocaleString() + ' partitions, sizes ' + Math.min.apply(null,sizes) +
+         '–' + Math.max.apply(null,sizes) + ' (target k ≤ size ≤ 2k = ' + (2*k) + ')' +
+         (small ? ', ' + small + ' below k' : ''), 'i');
+  return part;
+}
+function mondrianLabels(G, hs, maxCat, k, colVals){
+  const D = hs.length;
+  const lab = [], lv = [];
+  for (let j=0;j<D;j++){
+    const h = hs[j], col = colVals[j];
+    if (h.kind === 'numeric'){
+      let mn=Infinity, mx=-Infinity;
+      for (let t=0;t<G.length;t++){ const v = col[G[t]]; if(v<mn)mn=v; if(v>mx)mx=v; }
+      const s = '[' + nfmt(mn) + ', ' + nfmt(mx + (h.span > 0 ? h.span*1e-6 : 1e-3)) + ')';
+      const m = new Map(); for (const i of G) m.set(i, s);
+      lab.push(m); lv.push(0);
+    } else {
+      const vs = new Set(); for (const i of G) vs.add(col[i]);
+      let start = 0;
+      if (vs.size > 1){
+        start = h.levels.length - 1;
+        for (let l=0; l<h.levels.length; l++){
+          const lm = h.levels[l].map, reps = new Set();
+          for (const v of vs) reps.add(lm.get(v));
+          if (reps.size <= maxCat){ start = l; break; }
+        }
+      }
+      const m = new Map(), lm = h.levels[start].map;
+      for (const i of G) m.set(i, start === 0 ? col[i] : (lm.get(col[i]) || '*'));
+      lab.push(m); lv.push(start);
+    }
+  }
+  const minCell = () => {
+    const cnt = new Map();
+    for (let t=0;t<G.length;t++){
+      let key = '';
+      for (let j=0;j<D;j++) key += lab[j].get(G[t]) + '\u0001';
+      cnt.set(key, (cnt.get(key)||0)+1);
+    }
+    let mn = Infinity; cnt.forEach(v => { if (v<mn) mn=v; });
+    return cnt.size ? mn : 0;
+  };
+  let guard = 0, bumped = 0, collapsed = 0;
+  for (let j=0;j<D;j++)
+    if (hs[j].kind !== 'numeric' && lv[j] === hs[j].levels.length-1 && new Set(G.map(i=>colVals[j][i])).size > 1) collapsed++;
+  while (minCell() < k && guard++ < 40){
+    let any = false;
+    for (let j=0;j<D;j++){
+      const h = hs[j];
+      if (h.kind === 'numeric' || lv[j] >= h.levels.length - 1) continue;
+      lv[j]++; bumped++;
+      const lm = h.levels[lv[j]].map, col = colVals[j];
+      for (const i of G) lab[j].set(i, lv[j] === 0 ? col[i] : (lm.get(col[i]) || '*'));
+      if (lv[j] === h.levels.length-1 && new Set(G.map(i=>col[i])).size > 1) collapsed++;
+      any = true;
+      if (minCell() >= k) break;
+    }
+    if (!any) break;
+  }
+  return {lab, lv, minCell: minCell(), bumped, collapsed};
+}
+
+/* ---------------- k-anonymity: full generalization lattice ---------------- */
+function latticeSearch(hs, qiCols, k, idx){
+  const D = hs.length, L = hs[0].levels.length;
+  const rows = idx || Array.from({length: state.nrows}, (_,i) => i);
+  const n = rows.length;
+  const rowVals = [];
+  for (let j=0;j<D;j++){
+    const raw = new Array(n);
+    for (let i=0;i<n;i++) raw[i] = hs[j].kind === 'numeric' ? toNumber(state.rawRows[rows[i]][qiCols[j]]) : state.rawRows[rows[i]][qiCols[j]];
+    rowVals.push(raw);
+  }
+  const ids = [], strides = [];
+  for (let j=0;j<D;j++){
+    const perLevel = [];
+    let maxId = 0;
+    for (let lv=0; lv<L; lv++){
+      const labelIds = new Map();
+      const lvMap = hs[j].levels[lv].map;
+      for (const lab of lvMap.values()) if (!labelIds.has(lab)) labelIds.set(lab, labelIds.size);
+      maxId = Math.max(maxId, labelIds.size);
+      const arr = new Int32Array(n);
+      for (let i=0;i<n;i++){
+        const id = labelIds.get(lvMap.get(rowVals[j][i]));
+        arr[i] = id === undefined ? 0 : id;
+      }
+      perLevel.push(arr);
+    }
+    ids.push(perLevel);
+    strides.push(maxId + 1);
+  }
+  const cache = new Map();
+  const minSize = lv => {
+    const key = lv.join(',');
+    if (cache.has(key)) return cache.get(key);
+    const mult = new Array(D);
+    let acc = 1;
+    for (let j=0;j<D;j++){ mult[j] = acc; acc *= strides[j]; }
+    const counts = new Map();
+    for (let i=0;i<n;i++){
+      let kk = 0;
+      for (let j=0;j<D;j++) kk += ids[j][lv[j]][i] * mult[j];
+      counts.set(kk, (counts.get(kk) || 0) + 1);
+    }
+    let mn = Infinity;
+    counts.forEach(c => { if (c < mn) mn = c; });
+    if (!counts.size) mn = 0;
+    cache.set(key, mn);
+    return mn;
+  };
+  const lossOf = lv => { let s=0; for (let j=0;j<D;j++) s += lv[j]/(L-1); return s/D; };
+  const cur = new Array(D).fill(0);
+  let guard = 0;
+  const cap = 4 * D * L + 40;
+  while (minSize(cur) < k && guard < cap){
+    let best = -1, bestScore = -Infinity;
+    for (let j=0;j<D;j++){
+      if (cur[j] >= L-1) continue;
+      const t = cur.slice(); t[j]++;
+      const after = minSize(t), before = minSize(cur);
+      const gain = (Math.min(after,k) - Math.min(before,k)) / (lossOf(t) - lossOf(cur) + 1e-9);
+      const score = gain + (after >= k && before < k ? 1e6 : 0);
+      if (score > bestScore){ bestScore = score; best = j; }
+    }
+    if (best < 0) break;
+    cur[best]++;
+    guard++;
+  }
+  let improved = true, g2 = 0;
+  while (improved && g2 < D*L){
+    improved = false;
+    for (let j=0;j<D;j++){
+      if (cur[j] === 0) continue;
+      const t = cur.slice(); t[j]--;
+      if (minSize(t) >= k){ cur = t; improved = true; }
+    }
+    g2++;
+  }
+  const mn = minSize(cur);
+  logMsg((idx ? 'fallback lattice on ' + n.toLocaleString() + ' leftover row(s)' : 'lattice search') +
+         ': hierarchy levels [' + qiCols.map((c,j)=>c+'='+cur[j]).join(', ') + '] of ' + L +
+         ' → min class size ' + mn + ', mean precision loss ' + pctf(lossOf(cur)) +
+         ' (' + cache.size + ' lattice points probed)', 'i');
+  return {levels:cur, minSize:mn, loss:lossOf(cur), ok:mn >= k};
+}
+
+/* ---------------- evaluation ---------------- */
+function groupRows(rows, qiCols){
+  const m = new Map();
+  for (const r of rows){
+    const key = qiCols.map(c => r.q[c]).join('\u0001');
+    if(!m.has(key)) m.set(key, []);
+    m.get(key).push(r);
+  }
+  return Array.from(m.entries()).map(([key, members]) => ({key, members, size:members.length}));
+}
+function distinctIn(members, col){ const s = new Set(); for (const m of members) s.add(m.s[col]); return s; }
+
+function tcTree(col, type, tMetric, saCtx){
+  const vals = Array.from(saCtx.distinct.get(col).keys());
+  if (tMetric === 'tv') return {kind:'tv', vals: vals.slice()};
+  if (tMetric === 'emd'){ const s = vals.slice().sort((a,b)=>Number(a)-Number(b)); return {kind:'emd', vals:s}; }
+  if (type === 'numeric'){
+    const s = vals.slice().sort((a,b)=>Number(a)-Number(b));
+    const build = (a,b) => b - a === 1 ? {value:s[a]} : (()=>{ const m = (a+b)>>1; return {children:[build(a,m), build(m+1,b)]}; })();
+    return {kind:'tree', root: build(0, s.length-1), vals:s};
+  }
+  const groups = new Map();
+  for (const v of vals){ const g = saCtx.chunk.get(v) || '*'; if(!groups.has(g)) groups.set(g,[]); groups.get(g).push(v); }
+  const root = {children: Array.from(groups.entries()).map(([g, members]) =>
+    ({group:g, children: members.sort().map(v=>({value:v}))}))};
+  return {kind:'tree', root, vals: vals.slice()};
+}
+function distOf(tv, counts, gCounts, classN, globN){
+  if (classN === 0) return 0;
+  if (tv.kind === 'tv'){
+    let d = 0;
+    for (const v of tv.vals) d += Math.abs((counts.get(v)||0)/classN - (gCounts.get(v)||0)/globN);
+    return d/2;
+  }
+  if (tv.kind === 'emd'){
+    let cp = 0, gp = 0, d = 0;
+    for (const v of tv.vals){
+      cp += (counts.get(v)||0)/classN; gp += (gCounts.get(v)||0)/globN;
+      d += Math.abs(cp - gp);
+    }
+    return d;
+  }
+  let best = Infinity;
+  const sub = (node, c, g) => {
+    if (node.value !== undefined) return {c:(c.get(node.value)||0), g:(g.get(node.value)||0)};
+    let C=0,G=0;
+    const cc=[], gg=[];
+    for (const ch of node.children){
+      const r = sub(ch, c, g); C+=r.c; G+=r.g; cc.push(r.c); gg.push(r.g);
+    }
+    if (C > 0 && G > 0 && node.children.length > 1){
+      let d = 0;
+      for (let i=0;i<cc.length;i++) d += Math.abs(cc[i]/C - gg[i]/G);
+      d /= 2;
+      if (d < best) best = d;
+    }
+    return {c:C, g:G};
+  };
+  sub(tv.root, counts, gCounts);
+  return best === Infinity ? 0 : best;
+}
+
+function evaluate(rows, o){
+  const qiCols = o.qiCols, saCols = o.saCols, k = o.k, l = o.l, t = o.t;
+  const active = rows.filter(r => !r.suppressed);
+  const groups = groupRows(active, qiCols);
+  const sizes = groups.map(g => g.size);
+  const n = active.length;
+  const res = {n, nGroups:groups.length, groups, sizes,
+    k:{}, l:{}, t:{}, utility:{}, classEntropy:0};
+
+  res.k.min = sizes.length ? Math.min(...sizes) : 0;
+  res.k.max = sizes.length ? Math.max(...sizes) : 0;
+  res.k.avg = mean(sizes);
+  res.k.median = medianSorted(sizes);
+  res.k.distinctQi = new Set(active.map(r => qiCols.map(c=>r.q[c]).join('\u0001'))).size;
+  res.k.violGroups = sizes.filter(s => s < k).length;
+  res.k.atRiskRows = sizes.filter(s => s < k).reduce((a,b)=>a+b, 0);
+  res.k.atRiskPct = n ? res.k.atRiskRows / n : 0;
+  res.k.matchRate = n ? sizes.reduce((a,s)=>a + 1/s, 0) / n : 0;
+  res.k.uniqueRows = sizes.filter(s => s === 1).length;
+  res.k.ok = res.k.min >= k;
+
+  res.classEntropy = groups.length ? entropy(sizes) / Math.log(groups.length || 2) : 0;
+
+  for (const c of saCols){
+    const dists = groups.map(g => distinctIn(g.members, c).size);
+    const cnt = {};
+    for (const d of dists) cnt[d] = (cnt[d]||0)+1;
+    res.l[c] = {min: dists.length?Math.min(...dists):0, avg: mean(dists), max: dists.length?Math.max(...dists):0,
+      violGroups: dists.filter(d=>d<l).length, violPct: groups.length ? dists.filter(d=>d<l).length/groups.length : 0,
+      hist: cnt, meanEntropy: mean(groups.map(g => {
+        const dv = distinctIn(g.members, c).size;
+        return dv > 1 ? entropy(g.members.map(m=>m.s[c]))/Math.log(dv) : 0;
+      }))};
+  }
+  for (const c of saCols){
+    const gCounts = o.saCtx.global.get(c);
+    const gN = o.saCtx.globalN;
+    const tv = o.saCtx.tree[c];
+    const d = groups.map(g => {
+      const cc = new Map(); for (const m of g.members) cc.set(m.s[c], (cc.get(m.s[c])||0)+1);
+      return distOf(tv, cc, gCounts, g.members.length, gN);
+    });
+    res.t[c] = {max: d.length?Math.max(...d):0, avg: mean(d), min: d.length?Math.min(...d):0,
+      violGroups: d.filter(x=>x>t).length,
+      violPct: groups.length ? d.filter(x=>x>t).length/groups.length : 0,
+      per: d};
+  }
+  res.t.overallMax = saCols.length ? Math.max(...saCols.map(c=>res.t[c].max)) : 0;
+  res.t.overallAvg = saCols.length ? mean(saCols.map(c=>res.t[c].avg)) : 0;
+  res.t.violGroups = saCols.length ? saCols.reduce((n,c)=>n+res.t[c].violGroups, 0) : 0;
+  res.t.ok = saCols.length ? saCols.every(c => res.t[c].max <= t + 1e-9) : true;
+  res.l.ok = saCols.length ? saCols.every(c => res.l[c].violGroups === 0) : true;
+  res.l.overallMin = saCols.length ? Math.min(...saCols.map(c=>res.l[c].min)) : 0;
+
+  for (const c of qiCols.concat(saCols)){
+    const isQi = qiCols.indexOf(c) >= 0;
+    const before = new Set(), after = new Set();
+    for (const r of active){ before.add(r.raw[c]); after.add(isQi ? r.q[c] : r.s[c]); }
+    res.utility[c] = {before: before.size, after: after.size,
+      reduction: before.size ? 1 - after.size/before.size : 0};
+  }
+  res.suppressed = rows.length - n;
+  res.suppressPct = rows.length ? res.suppressed/rows.length : 0;
+  return res;
+}
+function utilityLoss(o, rows){
+  const qiCols = o.qiCols, saCols = o.saCols, hs = o.hs;
+  let qiLoss = 0, saLoss = 0, nq = 0, ns = 0, cells = 0, dist = 0;
+  const active = rows.filter(r=>!r.suppressed);
+  for (const r of active){
+    for (let j=0;j<qiCols.length;j++){
+      const h = hs[j], c = qiCols[j], lv = r.gi && r.gi[j] !== undefined ? r.gi[j] : null;
+      let L = 0;
+      if (h.kind === 'numeric'){
+        const v = toNumber(r.raw[c]);
+        const lab = r.q[c] || '';
+        const m = /^\[([^\,]+),\s*([^\]]+)\)$/.exec(lab);
+        if (m){ const lo = Number(m[1]), hi = Number(m[2]);
+          L = h.span > 0 ? (hi - lo)/h.span : 0; }
+        else L = r.raw[c] === r.q[c] ? 0 : 1;
+      } else {
+        L = lv === null ? (r.raw[c] === r.q[c] ? 0 : 1) : lv / Math.max(1, h.levels.length-1);
+      }
+      L = clamp(L,0,1); qiLoss += L; nq++; cells++;
+    }
+    ns++;
+    for (const c of saCols){
+      if (r.raw[c] !== r.s[c]){
+        const h = o.saCtx.hier[c];
+        let L = 1;
+        if (h.kind === 'numeric'){
+          const a = toNumber(r.raw[c]), b = toNumber(r.s[c]);
+          if (isFinite(a) && isFinite(b)) L = h.span > 0 ? Math.min(1, Math.abs(b-a)/h.span) : 0;
+        } else if (h.kind === 'categorical'){
+          const A = o.saCtx.chunk.get(r.raw[c]), B = o.saCtx.chunk.get(r.s[c]);
+          L = (A !== undefined && A === B) ? 0.5 : 1;
+        }
+        saLoss += L; dist++;
+      }
+    }
+  }
+  return {qi: nq ? qiLoss/nq : 0, sa: ns ? saLoss/ns : 0, edited: dist, cells};
+}
+
+/* ---------------- l-diversity repair (data swapping) ---------------- */
+function enforceLDiversity(o, ev){
+  const saCols = o.saCols, l = o.l;
+  if (!saCols.length) return null;
+  let swaps = 0, suppressed = 0, unresolved = 0, noDup = 0, noDonor = 0;
+  for (const c of saCols){
+    if (ev.l[c].violGroups === 0) continue;
+    if (o.saCtx.distinct.get(c).size < l){
+      logMsg('l-diversity impossible on "'+c+'": the whole table holds only ' + o.saCtx.distinct.get(c).size +
+             ' distinct values but l = ' + l, 'e');
+      unresolved++;
+      continue;
+    }
+    const byVal = new Map();
+    for (const r of o.rows){
+      if (r.suppressed) continue;
+      if (!byVal.has(r.s[c])) byVal.set(r.s[c], []);
+      byVal.get(r.s[c]).push(r);
+    }
+    let guard = 0, changed = true, noDup = 0, noDonor = 0;
+    while (changed && guard++ < 400){
+      changed = false;
+      const active = o.rows.filter(r=>!r.suppressed);
+      const groups = groupRows(active, o.qiCols);
+      const groupOf = new Map();
+      groups.forEach(G => G.members.forEach(m => groupOf.set(m, G)));
+      const bad = groups.filter(G => distinctIn(G.members, c).size < l);
+      if (!bad.length) break;
+      for (const G of bad){
+        const have = new Map();
+        for (const m of G.members) have.set(m.s[c], (have.get(m.s[c])||0)+1);
+        const cand = G.members.find(m => have.get(m.s[c]) >= 2);
+        if (!cand){ noDup++; continue; }
+        const missing = Array.from(o.saCtx.distinct.get(c).keys())
+          .filter(v => !have.has(v))
+          .sort((x,y)=> (o.saCtx.distinct.get(c).get(y) - o.saCtx.distinct.get(c).get(x)));
+        let done = false;
+        for (const v of missing){
+          for (const donor of (byVal.get(v) || [])){
+            const D = groupOf.get(donor);
+            if (!D || D === G || donor.suppressed) continue;
+            const dHave = new Map();
+            for (const m of D.members) dHave.set(m.s[c], (dHave.get(m.s[c])||0)+1);
+            if ((dHave.get(v)||0) < 2) continue;
+            const give = donor.s[c];
+            const nd = new Map(dHave);
+            nd.set(v, nd.get(v)-1); if (nd.get(v) === 0) nd.delete(v);
+            nd.set(give, (nd.get(give)||0)+1);
+            if (nd.size < l) continue;
+            const tg = new Map(have);
+            tg.set(cand.s[c], tg.get(cand.s[c])-1); if (tg.get(cand.s[c]) === 0) tg.delete(cand.s[c]);
+            tg.set(v, (tg.get(v)||0)+1);
+            if (tg.size < l) continue;
+            cand.s[c] = v; donor.s[c] = give;
+            cand.edited = donor.edited = true;
+            cand.note = donor.note = 'swap(l)';
+            swaps++; done = true; changed = true;
+            break;
+          }
+          if (done) break;
+        }
+        if (done) continue;
+        noDonor++; unresolved++;
+        if (o.cfg.suppressL){
+          for (const m of G.members){ m.suppressed = true; m.note = 'suppressed(l)'; }
+          suppressed += G.members.length;
+          changed = true;
+        }
+      }
+    }
+    const after = evaluate(o.rows, o);
+    if (noDup) logMsg('l-diversity on "'+c+'": ' + noDup + ' class(es) are 100% homogeneous on this attribute — every record in them shares one value, so nothing can be exchanged without inventing data', 'w');
+    if (noDonor) logMsg('l-diversity on "'+c+'": ' + noDonor + ' class(es) could not be repaired by swapping — no donor exists in a class that could spare the missing value' +
+      (o.cfg.suppressL ? '; they were suppressed' : '; they are released unchanged — tick "suppress classes that cannot reach l" to drop them instead'), o.cfg.suppressL ? 'w' : 'e');
+    if (after.l[c].violGroups === 0) logMsg('l-diversity on "'+c+'": every released class holds ≥ ' + l + ' distinct values', 'g');
+    else logMsg('l-diversity on "'+c+'": ' + after.l[c].violGroups + ' released class(es) still below l = ' + l, 'e');
+  }
+  if (swaps) logMsg('l-diversity: ' + swaps + ' sensitive-value swap(s) applied — class sizes untouched, k-anonymity preserved', 'g');
+  if (suppressed) logMsg('l-diversity: ' + suppressed + ' row(s) suppressed to reach l = ' + l, 'w');
+  return {swaps, suppressed, unresolved, noDup, noDonor};
+}
+
+/* ---------------- t-closeness repair ---------------- */
+function enforceTCloseness(o, ev){
+  const saCols = o.saCols, t = o.t;
+  if (!saCols.length) return {edits:0};
+  let edits = 0, gaveUp = 0, steps = 0;
+  for (const c of saCols){
+    const tv = o.saCtx.tree[c], gCounts = o.saCtx.global.get(c);
+    const domain = o.saCtx.cand[c], hier = o.saCtx.hier[c];
+    const pre = ev.t[c].max;
+    if (pre <= t + 1e-9) continue;
+    const groups = groupRows(o.rows.filter(r=>!r.suppressed), o.qiCols);
+    const cnts = groups.map(G => {
+      const m = new Map();
+      for (const r of G.members) m.set(r.s[c], (m.get(r.s[c])||0)+1);
+      return m;
+    });
+    const dists = groups.map((G,i) => distOf(tv, cnts[i], gCounts, G.members.length, o.saCtx.globalN));
+    const n = o.saCtx.globalN;
+    let local = 0;
+    while (steps < 2000){
+      let wi = -1, wd = -1;
+      for (let i=0;i<dists.length;i++) if (dists[i] > wd){ wd = dists[i]; wi = i; }
+      if (wi < 0 || wd <= t + 1e-9) break;
+      steps++; local++;
+      const G = groups[wi], cc = cnts[wi], size = G.members.length;
+      const curD = new Map();
+      for (const c2 of saCols) curD.set(c2, distinctIn(G.members, c2).size);
+      const floorD = new Map();
+      for (const c2 of saCols) floorD.set(c2, o.l > 1 ? Math.min(o.l, curD.get(c2)) : 0);
+      let best = null;
+      for (const m of G.members){
+        const oldV = m.s[c], oldCnt = cc.get(oldV);
+        for (const candVal of domain){
+          if (candVal === oldV) continue;
+          const add = cc.has(candVal) ? 0 : 1;
+          const rem = oldCnt === 1 ? 1 : 0;
+          if (curD.get(c) + add - rem < floorD.get(c)) continue;
+          const ncc = new Map(cc);
+          ncc.set(oldV, oldCnt - 1);
+          if (ncc.get(oldV) === 0) ncc.delete(oldV);
+          ncc.set(candVal, (ncc.get(candVal)||0)+1);
+          const nd = distOf(tv, ncc, gCounts, size, n);
+          const cost = ordinalCost(hier, oldV, candVal);
+          if (!best || nd < best.nd - 1e-12 || (Math.abs(nd - best.nd) < 1e-12 && cost < best.cost))
+            best = {row:m, val:candVal, nd, cost, ncc};
+        }
+      }
+      if (!best){ gaveUp++; break; }
+      best.row.s[c] = best.val;
+      best.row.edited = true; best.row.note = 'edit(t)';
+      cnts[wi] = best.ncc; dists[wi] = best.nd; edits++;
+    }
+    let post = 0;
+    for (let i=0;i<dists.length;i++) if (dists[i] > post) post = dists[i];
+    logMsg('t-closeness on "'+c+'": worst class distance ' + fmt(pre,3) + ' → ' + fmt(post,3) + ' after ' + local +
+           ' single-value repair(s) across ' + groups.length.toLocaleString() + ' class(es) (t = ' + t + ')',
+           post <= t + 1e-9 ? 'g' : 'w');
+  }
+  if (gaveUp) logMsg('t-closeness repair stopped early on ' + gaveUp + ' class(es) — no candidate value could reduce the distance further', 'w');
+  return {edits, gaveUp, steps};
+}
+function ordinalCost(h, a, b){
+  if (a === b) return 0;
+  if (h.kind === 'numeric'){
+    const x = toNumber(a), y = toNumber(b);
+    return (isFinite(x) && isFinite(y)) ? Math.abs(x-y) : 1e9;
+  }
+  return 1;
+}
+function refreshGlobal(o){
+  const active = o.rows.filter(r=>!r.suppressed);
+  for (const c of o.saCols){
+    const cnt = new Map();
+    for (const r of active) cnt.set(r.s[c], (cnt.get(r.s[c])||0)+1);
+    o.saCtx.global.set(c, cnt);
+    o.saCtx.tree[c] = tcTree(c, state.types[c], currentTMetric(), o.saCtx);
+    o.saCtx.cand[c] = candidateDomain(o.saCtx.hier[c], cnt);
+  }
+  o.saCtx.globalN = active.length;
+  return active.length;
+}
+function candidateDomain(h, counts){
+  const vals = Array.from(counts.keys());
+  if (h.kind === 'numeric'){
+    const nums = vals.map(v => ({v, n: toNumber(v)})).filter(x => isFinite(x.n)).sort((a,b)=>a.n-b.n).map(x=>x.v);
+    if (nums.length <= 240) return nums;
+    const step = nums.length / 240, out = [];
+    for (let i=0;i<240;i++) out.push(nums[Math.floor(i*step)]);
+    return out;
+  }
+  const byFreq = vals.slice().sort((a,b)=> (counts.get(b)-counts.get(a)));
+  return byFreq.slice(0, 240);
+}
+
+/* ---------------- main pipeline ---------------- */
+function anonymize(cfg){
+  clearLog();
+  const t0 = performance.now();
+  const qiCols = qis(), saCols = sas();
+  if (!qiCols.length) throw new Error('Select at least one quasi-identifier.');
+  const levels = clamp(parseInt($('#levels').value,10) || 7, 2, 10);
+  const maxCat = clamp(parseInt($('#maxCat').value,10) || 4, 1, 12);
+  const hs = qiCols.map(c => buildHierarchy(c, state.types[c], levels));
+  const colVals = colValues(qiCols);
+
+  const rows = state.rawRows.map((raw, i) => ({
+    idx:i, raw, q:{}, s:{}, suppressed:false, edited:false, note:'', gi:{}
+  }));
+  for (const r of rows) for (const c of saCols) r.s[c] = r.raw[c];
+
+  const saCtx = {hier:{}, distinct:new Map(), global:new Map(), tree:{}, cand:{}, chunk:new Map()};
+  for (const c of saCols){
+    const h = buildHierarchy(c, state.types[c], 6);
+    saCtx.hier[c] = h;
+    for (const v of h.levels[0].map.keys()) saCtx.chunk.set(v, h.levels[1] ? h.levels[1].map.get(v) : '*');
+    const cnt = new Map();
+    for (const r of rows) cnt.set(r.raw[c], (cnt.get(r.raw[c])||0)+1);
+    saCtx.distinct.set(c, cnt);
+  }
+  const o = {rows, qiCols, saCols, hs, saCtx, k:cfg.k, l:cfg.l, t:cfg.t, cfg, levels, maxCat, method:cfg.method};
+  logMsg('loaded ' + rows.length.toLocaleString() + ' records · QIs [' + qiCols.join(', ') +
+         '] · sensitive [' + (saCols.join(', ') || 'none') + '] · k=' + cfg.k + ' l=' + cfg.l + ' t=' + cfg.t, 'i');
+
+  const before = evaluate(
+    state.rawRows.map((raw,i)=>({idx:i, raw,
+      q:qiCols.reduce((a,c)=>(a[c]=raw[c],a),{}),
+      s:saCols.reduce((a,c)=>(a[c]=raw[c],a),{}),
+      suppressed:false, edited:false, note:'', gi:{}})),
+    {qiCols, saCols, k:cfg.k, l:cfg.l, t:cfg.t, saCtx: buildBeforeCtx(saCols)});
+  before.utility.qiLoss = 0; before.utility.saLoss = 0;
+  before.utility.totalLoss = 0; before.utility.utilityScore = 1;
+  before.utility.editedValues = 0;
+
+  o.method = cfg.method;
+  if (cfg.method === 'generalization'){
+    const lat = latticeSearch(hs, qiCols, cfg.k);
+    o.levelsUsed = lat.levels;
+    for (const r of rows) for (let j=0;j<qiCols.length;j++){
+      r.q[qiCols[j]] = generalizerFor(hs[j], lat.levels[j], r.raw[qiCols[j]]);
+      r.gi[j] = lat.levels[j];
+    }
+    logMsg('applied full generalization: every QI replaced by its value from the global hierarchy', 'i');
+  } else {
+    const parts = mondrianParts(hs, cfg.k, colVals);
+    o.levelsUsed = parts.map(()=>0);
+    let bumped = 0, collapsed = 0, dims = 0;
+    for (const G of parts){
+      const res = mondrianLabels(G, hs, maxCat, cfg.k, colVals);
+      bumped += res.bumped; collapsed += res.collapsed; dims += hs.length;
+      for (let j=0;j<qiCols.length;j++){
+        for (const i of G){ rows[i].q[qiCols[j]] = res.lab[j].get(i); rows[i].gi[j] = res.lv[j]; }
+      }
+    }
+    logMsg('local generalization: ' + parts.length.toLocaleString() + ' partitions generalized independently · ' +
+           collapsed.toLocaleString() + ' of ' + dims.toLocaleString() + ' (partition × attribute) cells collapsed to "*"' +
+           (bumped ? ' after ' + bumped + ' hierarchy level increase(s) needed to keep every class at k or above' : ''), 'i');
+    if (cfg.method === 'hybrid'){
+      const cells = new Map();
+      for (const r of rows){
+        const key = qiCols.map(c => r.q[c]).join('\u0001');
+        if (!cells.has(key)) cells.set(key, []);
+        cells.get(key).push(r);
+      }
+      const leftover = [];
+      cells.forEach(ms => { if (ms.length < cfg.k) for (const m of ms) leftover.push(m.idx); });
+      if (leftover.length){
+        logMsg('hybrid fallback: ' + leftover.length.toLocaleString() +
+               ' record(s) sit in a class below k after local generalization — applying a global hierarchy to just those', 'i');
+        const hsL = qiCols.map(c => buildHierarchy(c, state.types[c], levels));
+        const lat = latticeSearch(hsL, qiCols, cfg.k, leftover);
+        for (const i of leftover) for (let j=0;j<qiCols.length;j++){
+          rows[i].q[qiCols[j]] = generalizerFor(hsL[j], lat.levels[j], rows[i].raw[qiCols[j]]);
+          rows[i].gi[j] = lat.levels[j];
+        }
+        if (!lat.ok) logMsg('hybrid fallback could not reach k on its own — suppression will remove the remainder', 'w');
+      } else {
+        logMsg('hybrid fallback: not needed, local generalization was already k-safe', 'g');
+      }
+    }
+  }
+
+
+  if (cfg.suppress){
+    let n = 0;
+    for (const G of groupRows(rows, qiCols)){
+      if (G.size < cfg.k){
+        for (const m of G.members){ m.suppressed = true; m.note = 'suppressed(k)'; n++; }
+      }
+    }
+    if (n) logMsg('suppression: removed ' + n.toLocaleString() + ' row(s) from classes smaller than k = ' + cfg.k, 'w');
+    else logMsg('suppression: nothing to remove — every class already holds at least k = ' + cfg.k + ' records', 'g');
+  }
+
+  refreshGlobal(o);
+  let lrep = null, trep = null;
+  if (cfg.doL && saCols.length){
+    lrep = enforceLDiversity(o, evaluate(rows, o));
+    refreshGlobal(o);
+  }
+  if (cfg.doT && saCols.length){
+    trep = enforceTCloseness(o, evaluate(rows, o));
+  }
+  if (saCols.length && cfg.doL && cfg.doT && lrep && lrep.swaps && trep && trep.edits)
+    logMsg('post-repair: re-verified k, l and t across every equivalence class', 'i');
+
+  const after = evaluate(rows, o);
+  const loss = utilityLoss(o, rows);
+
+  let u = 0, w = 0;
+  for (const r of rows){
+    if (r.suppressed) continue;
+    let acc = 0;
+    for (let j=0;j<qiCols.length;j++) acc += clamp(cellLoss(hs[j], r.raw[qiCols[j]], r.q[qiCols[j]], r.gi[j]), 0, 1);
+    if (qiCols.length){ u += acc/qiCols.length; w++; }
+  }
+  after.utility.qiLoss = w ? u/w : 0;
+  after.utility.saLoss = loss.sa;
+  after.utility.totalLoss = clamp(after.utility.qiLoss*0.75 + after.utility.saLoss*0.25, 0, 1);
+  after.utility.editedValues = loss.edited;
+  after.utility.utilityScore = 1 - after.utility.totalLoss;
+
+  const buckets = [1, 4, 9, 19, 49, 99, 499, Infinity];
+  const labels = ['1','2–4','5–9','10–19','20–49','50–99','100–499','500+'];
+  after.hist = labels.map((lab,i) => ({label:lab, count: after.sizes.filter(s => s <= buckets[i]).length}));
+  after.histBefore = labels.map((lab,i) => ({label:lab, count: before.sizes.filter(s => s <= buckets[i]).length}));
+
+  logMsg('done in ' + (performance.now() - t0).toFixed(0) + ' ms', 'i');
+  return {before, after, rows, o, cfg, lrep, trep, qiCols, saCols,
+          log: state.log.slice(), ms: performance.now() - t0};
+}
+function cellLoss(h, rawV, genV, level){
+  if (rawV === genV) return 0;
+  if (h.kind === 'numeric'){
+    const m = /^\[([^\,]+),\s*([^\]]+)\)$/.exec(genV || '');
+    if (m){
+      const lo = Number(m[1]), hi = Number(m[2]);
+      const w = hi - lo, v = toNumber(rawV);
+      let hit = (v >= lo - 1e-9 && v < hi + 1e-9);
+      if (hit) return h.span > 0 ? clamp(w/h.span, 0, 1) : 0;
+      return 1;
+    }
+  }
+  if (level === null || level === undefined) return 1;
+  return clamp(level / Math.max(1, h.levels.length-1), 0, 1);
+}
+function buildBeforeCtx(saCols){
+  const saCtx = {hier:{}, distinct:new Map(), global:new Map(), tree:{}, cand:{}, chunk:new Map()};
+  for (const c of saCols){
+    const h = buildHierarchy(c, state.types[c], 6);
+    saCtx.hier[c] = h;
+    for (const v of h.levels[0].map.keys()) saCtx.chunk.set(v, h.levels[1] ? h.levels[1].map.get(v) : '*');
+    const cnt = new Map();
+    for (const r of state.rawRows) cnt.set(r[c], (cnt.get(r[c])||0)+1);
+    saCtx.distinct.set(c, cnt);
+  }
+  for (const c of saCols) saCtx.global.set(c, saCtx.distinct.get(c));
+  saCtx.globalN = state.nrows;
+  for (const c of saCols) saCtx.tree[c] = tcTree(c, state.types[c], currentTMetric(), saCtx);
+  return saCtx;
+}
+function currentTMetric(){ return $('#tMetric').value; }
+
+/* ---------------- charts (hand-rolled SVG) ---------------- */
+function svgPair(groups, opts){
+  opts = opts || {};
+  const W = 470, barX = 148, barMax = 210, rowH = 36;
+  const H = groups.length * rowH + 8;
+  const p = [];
+  groups.forEach((g, gi) => {
+    const y = gi * rowH + 8;
+    const max = Math.max.apply(null, g.vals.map(v => Math.abs(v.value)).concat([opts.min || 0]));
+    const scale = v => (opts.fixedMax ? clamp(Math.abs(v)/opts.fixedMax,0,1) : clamp(Math.abs(v)/(max||1), 0, 1));
+    const w1 = Math.max(1.5, scale(g.vals[0].value) * barMax);
+    const w2 = Math.max(1.5, scale(g.vals[1].value) * barMax);
+    p.push('<text x="0" y="'+(y+12)+'" fill="#8d9ab4" font-size="10.5" font-family="ui-sans-serif,system-ui">'+esc(g.label)+'</text>');
+    p.push('<rect x="'+barX+'" y="'+(y+1)+'" width="'+barMax+'" height="8" rx="2" fill="rgba(255,255,255,.03)"/>');
+    p.push('<rect x="'+barX+'" y="'+y+'" width="'+w1.toFixed(1)+'" height="9" rx="2" fill="'+(opts.c0||'#5d6b86')+'"/>');
+    p.push('<rect x="'+barX+'" y="'+(y+12)+'" width="'+w2.toFixed(1)+'" height="9" rx="2" fill="'+(opts.c1||'#5ad1ff')+'"/>');
+    p.push('<text x="'+(barX+barMax+6)+'" y="'+(y+8)+'" fill="#a9b6cf" font-size="9.5" font-family="ui-monospace,monospace">'+esc(g.vals[0].display)+'</text>');
+    p.push('<text x="'+(barX+barMax+6)+'" y="'+(y+20)+'" fill="#e6ebf5" font-size="9.5" font-family="ui-monospace,monospace">'+esc(g.vals[1].display)+'</text>');
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;overflow:visible">'+p.join('')+'</svg>';
+}
+function numHi(label){ const m = /(\d+)\s*[–-]\s*(\d+)/.exec(label); if (m) return +m[2];
+  const n = /(\d+)/.exec(label); return n ? +n[1] : Infinity; }
+function svgHist(hist, histB, k){
+  const W = 470, H = 210, pad = {l:40,r:12,t:12,b:44};
+  const max = Math.max(1, ...hist.map(h=>h.count), ...histB.map(h=>h.count));
+  const bw = (W - pad.l - pad.r) / hist.length;
+  const p = [];
+  for (let i=0;i<hist.length;i++){
+    const x = pad.l + i*bw;
+    const hb = histB[i].count, ha = hist[i].count;
+    const yb = pad.t + (H-pad.t-pad.b) * (1 - hb/max);
+    const ya = pad.t + (H-pad.t-pad.b) * (1 - ha/max);
+    p.push('<rect x="'+(x+2).toFixed(1)+'" y="'+yb.toFixed(1)+'" width="'+(bw-4).toFixed(1)+'" height="'+(H-pad.b-yb).toFixed(1)+'" fill="#3d4760" rx="2"/>');
+    p.push('<rect x="'+(x+2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+(bw-4).toFixed(1)+'" height="'+(H-pad.b-ya).toFixed(1)+'" fill="#5ad1ff" rx="2"/>');
+    p.push('<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-pad.b+15)+'" fill="#8d9ab4" font-size="9.5" text-anchor="middle" font-family="ui-monospace,monospace">'+esc(hist[i].label)+'</text>');
+    p.push('<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-pad.b+28)+'" fill="#5f6c86" font-size="8.5" text-anchor="middle" font-family="ui-monospace,monospace">#'+ha+'</text>');
+    p.push('<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-pad.b+39)+'" fill="#454f66" font-size="8" text-anchor="middle" font-family="ui-monospace,monospace">('+hb+')</text>');
+  }
+  p.push('<line x1="'+pad.l+'" y1="'+pad.t+'" x2="'+(W-pad.r)+'" y2="'+pad.t+'" stroke="#26304a"/>');
+  p.push('<line x1="'+pad.l+'" y1="'+(H-pad.b)+'" x2="'+(W-pad.r)+'" y2="'+(H-pad.b)+'" stroke="#26304a"/>');
+  p.push('<line x1="'+pad.l+'" y1="'+(H-pad.b)+'" x2="'+pad.l+'" y2="'+pad.t+'" stroke="#26304a"/>');
+  p.push('<text x="6" y="'+(pad.t+4)+'" fill="#5f6c86" font-size="9" font-family="ui-monospace,monospace">'+max+'</text>');
+  p.push('<text x="6" y="'+(H-pad.b)+'" fill="#5f6c86" font-size="9" font-family="ui-monospace,monospace">0</text>');
+  const bad = hist.map((h,i) => h.label).filter((lab,i) => i < hist.length-1 && numHi(hist[i].label) < k);
+  p.push('<text x="'+pad.l+'" y="'+(pad.t-2)+'" fill="#ff6b81" font-size="9.5" font-family="ui-monospace,monospace">'+esc('violating buckets for k = '+k+': '+(bad.length?bad.join(', '):'none'))+'</text>');
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px">'+p.join('')+'</svg>';
+}
+function svgLineChart(series, opts){
+  opts = opts || {};
+  const W = 460, H = 220, pad = {l:42,r:14,t:12,b:32};
+  const xs = series[0].points.map(p=>p.x);
+  const xmin = Math.min.apply(null,xs), xmax = Math.max.apply(null,xs);
+  const allY = series.flatMap(s=>s.points.map(p=>p.y));
+  const ymin = Math.min.apply(null, allY.concat(opts.ymin !== undefined ? [opts.ymin] : []));
+  const ymax = Math.max.apply(null, allY.concat(opts.ymax !== undefined ? [opts.ymax] : []));
+  const X = v => pad.l + (W-pad.l-pad.r) * (xmax === xmin ? .5 : (v-xmin)/(xmax-xmin));
+  const Y = v => pad.t + (H-pad.t-pad.b) * (1 - (ymax === ymin ? .5 : (v-ymin)/(ymax-ymin)));
+  const p = [];
+  p.push('<rect x="'+pad.l+'" y="'+pad.t+'" width="'+(W-pad.l-pad.r)+'" height="'+(H-pad.t-pad.b)+'" fill="#111623" rx="4"/>');
+  for (let i=0;i<=4;i++){
+    const yy = pad.t + (H-pad.t-pad.b)*i/4;
+    const v = ymax - (ymax-ymin)*i/4;
+    p.push('<line x1="'+pad.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-pad.r)+'" y2="'+yy.toFixed(1)+'" stroke="#1e2637"/>');
+    p.push('<text x="'+(pad.l-6)+'" y="'+(yy+3).toFixed(1)+'" fill="#5f6c86" font-size="9" text-anchor="end" font-family="ui-monospace,monospace">'+fmt(v,2)+'</text>');
+  }
+  for (const pt of series[0].points){
+    p.push('<text x="'+X(pt.x).toFixed(1)+'" y="'+(H-pad.b+14)+'" fill="#8d9ab4" font-size="9" text-anchor="middle" font-family="ui-monospace,monospace">'+esc(String(pt.x))+'</text>');
+  }
+  p.push('<text x="'+((pad.l+W-pad.r)/2)+'" y="'+(H-4)+'" fill="#5f6c86" font-size="9" text-anchor="middle">'+esc(opts.xlabel||'')+'</text>');
+  if (opts.hline !== undefined && opts.hline >= ymin && opts.hline <= ymax){
+    p.push('<line x1="'+pad.l+'" y1="'+Y(opts.hline).toFixed(1)+'" x2="'+(W-pad.r)+'" y2="'+Y(opts.hline).toFixed(1)+'" stroke="#ff6b81" stroke-dasharray="4 3"/>');
+    p.push('<text x="'+(W-pad.r-2)+'" y="'+(Y(opts.hline)-4).toFixed(1)+'" fill="#ff6b81" font-size="9" text-anchor="end">'+esc(opts.hlabel||'')+'</text>');
+  }
+  for (const s of series){
+    const d = s.points.map((pt,i)=>(i?'L':'M')+X(pt.x).toFixed(1)+' '+Y(pt.y).toFixed(1)).join(' ');
+    p.push('<path d="'+d+'" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linejoin="round"/>');
+    for (const pt of s.points) p.push('<circle cx="'+X(pt.x).toFixed(1)+'" cy="'+Y(pt.y).toFixed(1)+'" r="2.8" fill="'+s.color+'"/>');
+  }
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px">'+p.join('')+'</svg>';
+}
+function svgTCBars(per, t, violIdx){
+  const vals = per.slice().sort((a,b)=>b-a);
+  const show = vals.slice(0, 80);
+  const W = 460, H = 150, pad = {l:10,r:10,t:12,b:26};
+  const max = Math.max(t*1.15, ...show, 0.001);
+  const bw = (W-pad.l-pad.r)/show.length;
+  const p = [];
+  p.push('<rect x="'+pad.l+'" y="'+pad.t+'" width="'+(W-pad.l-pad.r)+'" height="'+(H-pad.t-pad.b)+'" fill="#111623" rx="4"/>');
+  show.forEach((v,i)=>{
+    const x = pad.l + i*bw, h = (H-pad.t-pad.b)*(v/max);
+    p.push('<rect x="'+(x+1).toFixed(1)+'" y="'+(pad.t+(H-pad.t-pad.b)-h).toFixed(1)+'" width="'+Math.max(1,bw-2).toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+(v>t?'#ff6b81':'#3ddc97')+'" opacity=".85" rx="1"/>');
+  });
+  const ty = pad.t + (H-pad.t-pad.b)*(1 - t/max);
+  p.push('<line x1="'+pad.l+'" y1="'+ty.toFixed(1)+'" x2="'+(W-pad.r)+'" y2="'+ty.toFixed(1)+'" stroke="#ffb454" stroke-width="1.4" stroke-dasharray="5 3"/>');
+  p.push('<text x="'+(W-pad.r)+'" y="'+(ty-4).toFixed(1)+'" fill="#ffb454" font-size="9.5" text-anchor="end">t = '+t+'</text>');
+  p.push('<text x="'+pad.l+'" y="'+(H-8)+'" fill="#5f6c86" font-size="9">'+show.length+' of '+per.length+' classes (worst first)</text>');
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px">'+p.join('')+'</svg>';
+}
+
+/* ---------------- report rendering ---------------- */
+function ba(before, after, dec){
+  return '<span class="ba"><span class="b4">'+esc(before)+'</span><span class="arw">→</span><span class="af'+(dec||'')+'">'+esc(after)+'</span></span>';
+}
+function verdict(ok, text){
+  return '<div class="vb '+(ok ? 'pass' : 'fail')+'">'+(ok?'\u2713':'\u2715')+' '+text+'</div>';
+}
+function kpi(label, val, delta, cls, sub){
+  return '<div class="kpi '+(cls||'')+'"><div class="k-l">'+esc(label)+'</div><div class="k-v">'+val+'</div>'+
+         (delta ? '<div class="k-d">'+delta+'</div>' : '') + (sub ? '<div class="k-b">'+sub+'</div>' : '') + '</div>';
+}
+function render(){
+  const R = state.result; if (!R) return;
+  const b = R.before, a = R.after, cfg = R.cfg, saCols = R.saCols, qiCols = R.qiCols;
+  const out = [];
+  out.push('<div class="panel" id="report">');
+  out.push('<h2>4 · Audit report</h2>');
+  out.push('<div class="flexrow" style="align-items:center;margin-bottom:14px"><div class="verdict">');
+  out.push(verdict(a.k.ok, '<span class="k">'+(a.k.ok?'k-anonymity satisfied':'k-anonymity NOT satisfied')+'</span> — achieved k = '+a.k.min+' (target '+cfg.k+')'));
+  if (saCols.length) out.push(verdict(a.l.ok, '<span class="l">'+(a.l.ok?'l-diversity satisfied':'l-diversity NOT satisfied')+'</span> — min l = '+a.l.overallMin+' (target '+cfg.l+')'));
+  if (saCols.length) out.push(verdict(a.t.ok, '<span class="t">'+(a.t.ok?'t-closeness satisfied':'t-closeness NOT satisfied')+'</span> — max distance '+fmt(a.t.overallMax,3)+' (t = '+cfg.t+')'));
+  out.push('</div><div class="spacer" style="flex:1"></div><div class="flexrow" style="flex:0 0 auto">');
+  out.push('<button class="ghost" id="btnCsv" title="Every column, generalized where it is a quasi-identifier; suppressed rows are omitted">⬇ anonymized CSV</button>');
+  out.push('<button class="ghost" id="btnJson">⬇ JSON report</button>');
+  out.push('</div></div>');
+
+  out.push('<h3>Privacy — how much is hidden</h3><div class="grid g4">');
+  out.push(kpi('Minimum class size (k)', ba(b.k.min, a.k.min, a.k.ok?'ok':'bad'),
+    a.k.ok ? '<span class="v-ok">≥ k</span>' : '<span class="v-bad">&lt; k</span>', a.k.ok?'ok':'bad',
+    'avg '+nf(a.k.avg)+' · '+a.nGroups.toLocaleString()+' classes'));
+  out.push(kpi('Re-identification rate', ba(pctf(b.k.matchRate,2), pctf(a.k.matchRate,2), a.k.matchRate < b.k.matchRate?'ok':''),
+    'effective k = '+nf(1/Math.max(a.k.matchRate,1e-9))+' (1 / re-ID rate)', a.k.matchRate < b.k.matchRate*0.5?'ok':'', 'chance of picking the right record from a QI match'));
+  out.push(kpi('Records in a class < k', ba(nf(b.k.atRiskRows), nf(a.k.atRiskRows), a.k.atRiskRows < b.k.atRiskRows?'ok':'bad'),
+    pctf(a.k.atRiskPct)+' of released rows', a.k.atRiskRows?'bad':'ok', 'uniquely exposed individuals'));
+  out.push(kpi('Unique (singleton) records', ba(nf(b.k.uniqueRows), nf(a.k.uniqueRows), a.k.uniqueRows<b.k.uniqueRows?'ok':'bad'),
+    'rows appearing exactly once', a.k.uniqueRows?'bad':'ok'));
+  out.push(kpi('Equivalence-class entropy', ba(fmt(b.classEntropy,3), fmt(a.classEntropy,3), a.classEntropy>b.classEntropy?'ok':''),
+    'normalized Shannon entropy of class sizes', a.classEntropy>0.7?'ok':''));
+  if (saCols.length){
+    out.push(kpi('Minimum l-diversity', ba(b.l.overallMin, a.l.overallMin, a.l.ok?'ok':'bad'),
+      'per class, every sensitive column', a.l.ok?'ok':'bad', 'distinct sensitive values / class'));
+    out.push(kpi('Maximum t-closeness', ba(fmt(b.t.overallMax,3), fmt(a.t.overallMax,3), a.t.ok?'ok':'bad'),
+      'class ↔ global distance, worst class', a.t.ok?'ok':'bad', 'metric: '+currentTMetric()));
+  }
+  out.push('</div>');
+
+  out.push('<h3 style="margin-top:20px">Data utility — how much signal survives</h3><div class="grid g4">');
+  out.push(kpi('Utility score', ba('100%', pctf(a.utility.utilityScore), a.utility.utilityScore>0.5?'ok':a.utility.utilityScore>0.2?'warn':'bad'),
+    '= 1 − weighted information loss', a.utility.utilityScore>0.5?'ok':a.utility.utilityScore>0.2?'warn':'bad'));
+  out.push(kpi('Information loss (QIs)', ba('—', pctf(a.utility.qiLoss), a.utility.qiLoss<0.3?'ok':a.utility.qiLoss<0.6?'warn':'bad'),
+    'normalized cell precision', a.utility.qiLoss<0.3?'ok':'warn'));
+  out.push(kpi('Sensitive-value edits', ba('0', nf(a.utility.editedValues)),
+    saCols.length ? pctf(a.utility.saLoss)+' mean per-row distortion' : 'n/a — no sensitive columns'));
+  out.push(kpi('Suppression rate', ba('0%', pctf(a.suppressPct), a.suppressPct===0?'ok':a.suppressPct<0.05?'warn':'bad'),
+    nf(a.suppressed)+' of '+R.rows.length.toLocaleString()+' rows removed', a.suppressPct?'warn':'ok'));
+  out.push('</div>');
+
+  const problems = [];
+  if (!a.k.ok) problems.push('<b>k-anonymity not reached</b> \u2014 ' + a.k.violGroups.toLocaleString() + ' class(es) still hold fewer than k = ' + cfg.k +
+    ' records (' + nf(a.k.atRiskRows) + ' of ' + a.n.toLocaleString() + ' released rows are at risk). ' +
+    (cfg.suppress ? 'Suppression is on, so what is left is everything the anonymizer could not merge \u2014 the release is <b>not</b> k-anonymous.'
+                   : 'Tick \u201csuppress records in classes &lt; k\u201d, lower k, or drop the least frequent quasi-identifiers.'));
+  if (saCols.length && !a.l.ok){
+    const cols = saCols.filter(c => a.l[c].violGroups > 0);
+    problems.push('<b>l-diversity not reached</b> \u2014 ' + cols.map(c => esc(c) + ' (' + a.l[c].violGroups + ' class(es) below l, min ' + a.l[c].min + ')').join(', ') +
+      '. ' + (!cfg.doL ? 'The l-diversity repair stage is switched off.'
+        : cfg.suppressL ? 'What remains still violates l even after suppressing the unrepairable classes.'
+        : 'Those classes are homogeneous on the attribute, so no swap can fix them without inventing data: enable \u201csuppress classes that cannot reach l\u201d to drop them, or lower l.'));
+  }
+  if (saCols.length && !a.t.ok){
+    const cols = saCols.filter(c => a.t[c].max > cfg.t);
+    problems.push('<b>t-closeness not reached</b> \u2014 ' + cols.map(c => esc(c) + ' (worst class distance ' + fmt(a.t[c].max,3) + ' > t = ' + cfg.t + ')').join(', ') +
+      '. Raise t, or accept a residual skew: the repair loop stops when no single value change can reduce the distance further.');
+  }
+  if (problems.length) out.push('<div class="note warnbox"><b>Read this before releasing the data</b><br>' + problems.join('<br>') + '</div>');
+
+  out.push('<div class="grid g2" style="margin-top:16px">');
+  out.push('<div class="chart"><div class="ct">Privacy indicators, before → after</div><div class="cs">each row is scaled to its own maximum; labels show exact values</div>' +
+    svgPair([
+      {label:'min class size (k)', vals:[{value:b.k.min, display:String(b.k.min)},{value:a.k.min, display:String(a.k.min)}]},
+      {label:'re-ID rate (lower better)', vals:[{value:b.k.matchRate, display:pctf(b.k.matchRate,2)},{value:a.k.matchRate, display:pctf(a.k.matchRate,2)}]},
+      {label:'class entropy', vals:[{value:b.classEntropy, display:fmt(b.classEntropy,3)},{value:a.classEntropy, display:fmt(a.classEntropy,3)}]},
+      {label:'rows at risk', vals:[{value:b.k.atRiskRows, display:nf(b.k.atRiskRows)},{value:a.k.atRiskRows, display:nf(a.k.atRiskRows)}]}
+    ].concat(saCols.length ? [
+      {label:'min l-diversity', vals:[{value:b.l.overallMin, display:String(b.l.overallMin)},{value:a.l.overallMin, display:String(a.l.overallMin)}]},
+      {label:'max t-distance (lower better)', vals:[{value:b.t.overallMax, display:fmt(b.t.overallMax,3)},{value:a.t.overallMax, display:fmt(a.t.overallMax,3)}]}
+    ] : []), {c1:'#5ad1ff'}) +
+    '<div class="legend"><span><i style="background:#5d6b86"></i>before</span><span><i style="background:#5ad1ff"></i>after</span></div></div>');
+
+  out.push('<div class="chart"><div class="ct">Equivalence-class size distribution</div><div class="cs">number of classes per size bucket — everything must sit right of the k boundary</div>' +
+    svgHist(a.hist, a.histBefore, cfg.k) +
+    '<div class="legend"><span><i style="background:#3d4760"></i>before</span><span><i style="background:#5ad1ff"></i>after</span></div></div>');
+  out.push('</div>');
+
+  out.push('<div class="grid g2" style="margin-top:14px">');
+  out.push('<div class="chart"><div class="ct">Granularity per attribute</div><div class="cs">distinct values per column — the cost of generalization in one picture</div>' +
+    svgPair(qiCols.concat(saCols).map(c=>({label:c,
+      vals:[{value:b.utility[c].before, display:nf(b.utility[c].before)},{value:a.utility[c].after, display:nf(a.utility[c].after)}]})),
+      {c0:'#5d6b86', c1:'#c792ea'}) + '</div>');
+  if (saCols.length){
+    const per = a.t[saCols[0]].per;
+    out.push('<div class="chart"><div class="ct">t-closeness per equivalence class</div><div class="cs">attribute: <b>'+esc(saCols[0])+'</b> · bars above the dashed line violate t</div>' +
+      svgTCBars(per, cfg.t) + '</div>');
+  } else {
+    out.push('<div class="chart"><div class="ct">t-closeness</div><div class="cs">Assign a sensitive attribute to evaluate t-closeness.</div></div>');
+  }
+  out.push('</div>');
+
+  out.push('<div class="tabs" style="margin-top:22px">' +
+    '<button data-tab="data" class="on">Before / after data</button>' +
+    '<button data-tab="cls">Equivalence classes</button>' +
+    (saCols.length ? '<button data-tab="sens">Sensitive distribution</button>' : '') +
+    '<button data-tab="sweep">k-sweep</button>' +
+    '<button data-tab="log">Repair log &amp; method</button></div>');
+
+  out.push('<div class="tabc on" id="tab-data"></div>');
+  out.push('<div class="tabc" id="tab-cls"></div>');
+  if (saCols.length) out.push('<div class="tabc" id="tab-sens"></div>');
+  out.push('<div class="tabc" id="tab-sweep"><div class="note" id="sweepHost">Press <b>k-sweep</b> (or the button below) to plot the privacy / utility trade-off curve for k = 2…30.</div><div class="grid g2" id="sweepOut"></div></div>');
+  out.push('<div class="tabc" id="tab-log"></div>');
+  out.push('</div>');
+
+  out.push('<details style="margin-top:16px"><summary>What was actually done to the data</summary><div class="grid g3">' +
+    '<div><h3>Step 1 — generalization</h3><p>'+esc(R.o.method === 'generalization'
+      ? 'Full generalization: every value of every QI was replaced by a value from a global generalization hierarchy, and the least-generalized hierarchy combination satisfying k = '+cfg.k+' was kept (greedy lattice ascent followed by a local descent).'
+      : 'Mondrian multi-dimensional partitioning: records were recursively split on their widest quasi-identifier until each partition held between k and 2k records, then each partition was generalized to its own minimum interval (numeric) or to a minimal set of category groups (categorical) — raising a hierarchy level wherever that would have fragmented a partition into a class below k. ' +
+        (R.o.method === 'hybrid' ? 'Any class still below k after that was then re-generalized with a global hierarchy, so nothing is left to suppression unless it is unavoidable.' : ''))+'</p></div>' +
+    '<div><h3>Step 2 — '+(R.lrep ? 'l-diversity repair' : 'l-diversity')+'</h3><p>'+(saCols.length
+      ? (R.lrep && R.lrep.swaps ? R.lrep.swaps+' sensitive value(s) were swapped between equivalence classes so that every class holds at least l distinct values per sensitive column. Class sizes are untouched, so k-anonymity is preserved by construction.'
+        : 'No swaps were needed — every class already held at least l distinct values, or swapping could not improve the situation without breaking another class.')
+      : 'No sensitive attribute selected.')+(R.lrep && R.lrep.suppressed ? ' '+R.lrep.suppressed+' row(s) were suppressed because no compatible donor record existed.' : '')+'</p></div>' +
+    '<div><h3>Step 3 — '+(R.trep ? 't-closeness repair' : 't-closeness')+'</h3><p>'+(saCols.length
+      ? (R.trep && R.trep.edits ? R.trep.edits+' sensitive value(s) were edited, one at a time, each to the closest value that maximally reduced the worst over-threshold class distance while preserving l-diversity. This is the minimum-damage repair rather than a wholesale re-draw from the global distribution.'
+        : 'Every class was already within t of the global distribution — no edits were required.')
+      : 'No sensitive attribute selected.')+'</p></div></div></details>');
+  out.push('</div>');
+  $('#results').innerHTML = out.join('');
+
+  renderDataTab(); renderClassTab(); renderSensTab(); renderLogTab();
+  $('#btnCsv').onclick = downloadCsv;
+  $('#btnJson').onclick = downloadJson;
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), b => {
+    b.onclick = () => {
+      Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), x => x.classList.remove('on'));
+      Array.prototype.forEach.call(document.querySelectorAll('.tabc'), x => x.classList.remove('on'));
+      b.classList.add('on');
+      const t = document.getElementById('tab-'+b.dataset.tab);
+      if (t) t.classList.add('on');
+    };
+  });
+}
+function renderDataTab(){
+  const R = state.result; if (!R) return;
+  const cols = R.qiCols.concat(R.saCols);
+  const N = Math.min(R.rows.length, 250);
+  let h = '<div class="grid g2">';
+  h += '<div><h3>Original dataset'+(R.rows.length>250 ? ' (first 250 of '+R.rows.length.toLocaleString()+')' : '')+'</h3><div class="tscroll"><table><thead><tr>';
+  cols.forEach(c => h += '<th>'+esc(c)+(R.qiCols.includes(c)?' <span class="tag qi">QI</span>':' <span class="tag sa">SA</span>')+'</th>');
+  h += '</tr></thead><tbody>';
+  for (let i=0;i<N;i++){ h += '<tr>'; cols.forEach(c => h += '<td class="'+(R.qiCols.includes(c)?'qic':'sac')+'">'+esc(R.rows[i].raw[c])+'</td>'); h += '</tr>'; }
+  h += '</tbody></table></div></div>';
+  h += '<div><h3>Anonymized release'+(R.rows.length>250 ? ' (first 250 of '+R.rows.length.toLocaleString()+')' : '')+'</h3><div class="tscroll"><table><thead><tr>';
+  cols.forEach(c => h += '<th>'+esc(c)+'</th>');
+  h += '<th>action</th></tr></thead><tbody>';
+  for (let i=0;i<N;i++){
+    const r = R.rows[i];
+    h += '<tr class="'+(r.suppressed?'supp':'')+'">';
+    cols.forEach(c => {
+      const v = r.suppressed && c === R.qiCols[0] ? '*' : (R.qiCols.includes(c) ? r.q[c] : r.s[c]);
+      const ch = !r.suppressed && String(v) !== String(r.raw[c]);
+      h += '<td class="'+(ch?'chg':(R.qiCols.includes(c)?'qic':'sac'))+'">'+(r.suppressed && R.qiCols.includes(c) ? '<span style="color:var(--dim)">*</span>' : esc(v))+'</td>';
+    });
+    h += '<td><span class="tag '+(r.suppressed?'dat':(r.note?'':'ign'))+'">'+esc(r.note||'kept')+'</span></td></tr>';
+  }
+  h += '</tbody></table></div></div></div>';
+  h += '<div class="hint">Highlighted cells were modified. <b>*</b> marks a fully suppressed quasi-identifier value on a row that was removed from the release (it is not written to the exported CSV).</div>';
+  $('#tab-data').innerHTML = h;
+}
+function renderClassTab(){
+  const R = state.result; if (!R) return;
+  const a = R.after;
+  let h = '<div class="note">Equivalence classes = distinct combinations of the (generalized) quasi-identifiers. ' +
+    'An adversary who knows the QIs can only ever reason at this granularity. ' + a.nGroups.toLocaleString() + ' classes; ' +
+    '<b>'+a.k.violGroups+'</b> below k='+R.cfg.k+', <b>'+R.saCols.reduce((n,c)=>n+a.t[c].violGroups,0)+'</b> above t='+R.cfg.t+'.</div>';
+  h += '<div class="tscroll"><table><thead><tr><th>#</th><th>quasi-identifier combination</th><th>size</th><th>≥ k?</th>' +
+    R.saCols.map(c=>'<th>'+esc(c)+' distinct</th>').join('') + R.saCols.map(c=>'<th>'+esc(c)+' t-dist</th>').join('') + '</tr></thead><tbody>';
+  const sorted = a.groups.slice().sort((x,y)=>y.size-x.size);
+  const show = sorted.slice(0, 400);
+  show.forEach((G,i) => {
+    h += '<tr class="'+(i%2?'stripe-odd':'')+'"><td class="num">'+(i+1)+'</td><td>'+esc(G.key.replace(/\u0001/g,' | '))+'</td>' +
+      '<td class="num">'+G.size+'</td><td>'+(G.size>=R.cfg.k?'<span class="badge-v v-ok">yes</span>':'<span class="badge-v v-bad">no</span>')+'</td>';
+    for (const c of R.saCols){
+      const d = distinctIn(G.members, c).size;
+      h += '<td class="num" style="color:'+(d>=R.cfg.l?'var(--ok)':'var(--bad)')+'">'+d+'</td>';
+    }
+    for (const c of R.saCols){
+      const cc = new Map(); for (const m of G.members) cc.set(m.s[c], (cc.get(m.s[c])||0)+1);
+      const d = distOf(R.o.saCtx.tree[c], cc, R.o.saCtx.global.get(c), G.members.length, R.o.saCtx.globalN);
+      h += '<td class="num" style="color:'+(d<=R.cfg.t?'var(--ok)':'var(--bad)')+'">'+fmt(d,3)+'</td>';
+    }
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  if (sorted.length > 400) h += '<div class="hint">'+(sorted.length-400).toLocaleString()+' further classes not shown.</div>';
+  h += adversaryBlock();
+  $('#tab-cls').innerHTML = h;
+}
+function adversaryBlock(){
+  const R = state.result;
+  const bGroups = R.before.groups;
+  const target = bGroups.slice().sort((x,y)=>y.size-x.size)[0];
+  if (!target) return '';
+  const col = R.qiCols[0];
+  let h = '<details open style="margin-top:14px"><summary>🔍 Adversary view — the biggest equivalence class in the <u>original</u> data</summary>';
+  h += '<p>An attacker who sees the released table can ask: "which released record is person X?" Before anonymization, everyone in this class of <b>'+target.size+'</b> records looked identical on the quasi-identifiers, so the answer is ambiguous. If the attacker knows any <b>'+Math.max(0,target.size-1)+'</b> of the other records, the remaining one is <b>uniquely identified</b> — that is exactly what k-anonymity is supposed to prevent.</p>';
+  h += '<div class="tscroll" style="max-height:230px"><table><thead><tr><th>row</th>'+R.qiCols.map(c=>'<th>'+esc(c)+'</th>').join('')+R.saCols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>';
+  target.members.slice(0,60).forEach(m => {
+    h += '<tr><td class="num">'+m.idx+'</td>'+R.qiCols.map(c=>'<td class="qic">'+esc(m.raw[c])+'</td>').join('')+R.saCols.map(c=>'<td class="sac">'+esc(m.raw[c])+'</td>').join('')+'</tr>';
+  });
+  h += '</tbody></table></div>';
+  h += '<p>Compare with the same records in the <b>anonymized</b> release — the QI columns now read <code>'+esc(R.rows[target.members[0].idx].q[R.qiCols[0]])+'</code> (and the class holds ≥ k records by construction).</p>';
+  return h + '</details>';
+}
+function renderSensTab(){
+  const R = state.result; if (!R) return;
+  const saCols = R.saCols;
+  let h = '';
+  for (const c of saCols){
+    const g = R.o.saCtx.global.get(c);
+    const entries = Array.from(g.entries()).sort((x,y)=>y[1]-x[1]).slice(0,18);
+    const maxN = Math.max(...entries.map(e=>e[1]));
+    h += '<h3>'+esc(c)+' — class distributions vs. the global table</h3><div class="tscroll" style="max-height:300px"><table><thead><tr><th>class</th><th>size</th>' +
+      entries.map(e=>'<th>'+esc(String(e[0]).slice(0,16))+'</th>').join('') + '<th>t-dist</th></tr></thead><tbody>';
+    const groups = R.after.groups.slice().sort((a,b)=>b.size-a.size).slice(0,25);
+    const tot = R.after.n;
+    for (const G of groups){
+      const cc = new Map(); for (const m of G.members) cc.set(m.s[c], (cc.get(m.s[c])||0)+1);
+      const d = distOf(R.o.saCtx.tree[c], cc, R.o.saCtx.global.get(c), G.members.length, R.o.saCtx.globalN);
+      h += '<tr><td style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(G.key.replace(/\u0001/g,' | '))+'</td><td class="num">'+G.size+'</td>';
+      for (const e of entries){
+        const n = cc.get(e[0]) || 0;
+        const share = n/G.size, gshare = e[1]/tot;
+        const shade = n ? (Math.abs(share-gshare) > 0.2 ? 'background:rgba(255,107,129,.16)' : 'background:rgba(61,220,151,.1)') : '';
+        h += '<td class="num" style="'+shade+'">'+(n ? (share*100).toFixed(0)+'%' : '·')+'</td>';
+      }
+      h += '<td class="num" style="color:'+(d<=R.cfg.t?'var(--ok)':'var(--bad)')+'">'+fmt(d,3)+'</td></tr>';
+    }
+    h += '<tr style="background:rgba(90,209,255,.06)"><td><b>global distribution</b></td><td class="num"><b>'+tot.toLocaleString()+'</b></td>' +
+      entries.map(e=>'<td class="num" style="background:rgba(90,209,255,.06)"><b>'+((e[1]/tot)*100).toFixed(0)+'%</b></td>').join('') + '<td class="num">0.000</td></tr>';
+    h += '</tbody></table></div>';
+    const lh = R.after.l[c].hist, keys = Object.keys(lh).map(Number).sort((a,b)=>a-b);
+    h += '<div class="hint" style="margin-top:6px">l-diversity histogram (distinct '+esc(c)+' values → number of classes): ' +
+      keys.map(k => '<b>'+k+'</b>: '+lh[k]).join(' · ') + '</div>';
+  }
+  $('#tab-sens').innerHTML = h;
+}
+function renderLogTab(){
+  const R = state.result; if (!R) return;
+  let h = '<h3>Method trace</h3><div class="log">';
+  h += R.log.map(l => '<div class="'+l.cls+'">› '+esc(l.msg)+'</div>').join('');
+  h += '</div>';
+  h += '<h3 style="margin-top:14px">Repairs applied</h3><div class="grid g3">';
+  h += '<div class="kpi"><div class="k-l">Sensitive swaps (l)</div><div class="k-v">'+((R.lrep&&R.lrep.swaps)||0)+'</div><div class="k-b">records whose sensitive value was exchanged</div></div>';
+  h += '<div class="kpi"><div class="k-l">Sensitive edits (t)</div><div class="k-v">'+((R.trep&&R.trep.edits)||0)+'</div><div class="k-b">records whose sensitive value was replaced</div></div>';
+  h += '<div class="kpi"><div class="k-l">Suppressed rows</div><div class="k-v">'+nf(R.after.suppressed)+'</div><div class="k-b">'+pctf(R.after.suppressPct)+' of the input</div></div>';
+  h += '</div>';
+  h += '<details style="margin-top:14px"><summary>Which rows were touched</summary><div class="log" style="max-height:220px">' +
+    R.rows.filter(r=>r.note).slice(0,300).map(r=>'<div class="i">row '+r.idx+' · '+esc(r.note)+' · '+esc(R.qiCols.map(c=>r.q[c]).join(' | '))+'</div>').join('') +
+    '</div></details>';
+  h += '<details><summary>Numeric definition of the utility score</summary><p>' +
+    '<code>information loss = Σ_cells (generalized_width / domain_range) + Σ_edited (|new − old| / domain_range)</code>, ' +
+    'normalized to [0,1] and split 75% quasi-identifier / 25% sensitive-attribute weight; ' +
+    '<code>utility = 1 − loss</code>. Categorical QIs contribute <code>hierarchy_level / (depth − 1)</code>.</p></details>';
+  $('#tab-log').innerHTML = h;
+}
+
+/* ---------------- exports ---------------- */
+function download(name, content, type){
+  const b = new Blob([content], {type});
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href = u; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(u), 2000);
+}
+function downloadCsv(){
+  const R = state.result;
+  const qis = new Set(R.qiCols), sas = new Set(R.saCols);
+  const cols = state.headers.slice();
+  const q = s => '"' + String(s === undefined ? '' : s).replace(/"/g,'""') + '"';
+  const lines = [cols.map(q).join(',')];
+  for (const r of R.rows){
+    if (r.suppressed) continue;
+    lines.push(cols.map(c => q(qis.has(c) ? r.q[c] : sas.has(c) ? r.s[c] : r.raw[c])).join(','));
+  }
+  const tag = R.saCols.length ? 'k'+R.cfg.k+'_l'+R.cfg.l+'_t'+String(R.cfg.t).replace('.','p') : 'k'+R.cfg.k;
+  download('anonymized_' + tag + '.csv', lines.join('\n'), 'text/csv');
+}
+function downloadJson(){
+  const R = state.result, a = R.after, b = R.before;
+  const briefT = t => { const o = {}; for (const c in t) o[c] = {
+    max: t[c].max, avg: t[c].avg, min: t[c].min, violGroups: t[c].violGroups, violPct: t[c].violPct }; return o; };
+  const briefL = l => { const o = {}; for (const c in l) o[c] = {
+    min: l[c].min, avg: l[c].avg, max: l[c].max, violGroups: l[c].violGroups, violPct: l[c].violPct,
+    meanEntropy: l[c].meanEntropy }; return o; };
+  const briefK = x => ({min:x.k.min, max:x.k.max, avg:x.k.avg, median:x.k.median, classes:x.nGroups,
+    reIdRate:x.k.matchRate, rowsInSmallClasses:x.k.atRiskRows, singletonRows:x.k.uniqueRows,
+    classEntropy:x.classEntropy, satisfied:x.k.ok});
+  const rep = {
+    generated: new Date().toISOString(),
+    input: {rows: R.rows.length, columns: state.headers, quasiIdentifiers: R.qiCols, sensitiveAttributes: R.saCols},
+    parameters: R.cfg,
+    verdict: {kAnonymity: a.k.ok, lDiversity: R.saCols.length ? a.l.ok : null,
+              tCloseness: R.saCols.length ? a.t.ok : null, releasedRows: a.n, suppressedRows: a.suppressed},
+    before: {k: briefK(b), l: briefL(b.l), t: briefT(b.t)},
+    after: {k: briefK(a), l: briefL(a.l), t: briefT(a.t), utility: a.utility,
+            suppressed: a.suppressed, suppressPct: a.suppressPct,
+            classSizeHistogram: a.hist},
+    repairs: {lDiversity: R.lrep, tCloseness: R.trep},
+    method: R.o.method,
+    log: R.log
+  };
+  download('anonymization-report.json', JSON.stringify(rep, (k,v)=> v instanceof Map ? Array.from(v.entries()) : v, 2), 'application/json');
+}
+
+/* ---------------- k-sweep ---------------- */
+function runSweep(){
+  const host = $('#sweepOut'), msg = $('#sweepHost');
+  if (!state.result){ msg.textContent = 'Run the anonymization first.'; return; }
+  host.innerHTML = '';
+  const uniq = Array.from(new Set([2,3,5,8,12,18,25,40,state.result.cfg.k]
+    .filter(k => k <= Math.max(25, state.nrows)).sort((a,b)=>a-b)));
+  const queue = uniq.slice();
+  const out = [];
+  const t0 = performance.now();
+  const step = () => {
+    if (!queue.length){ drawSweep(out, uniq, t0, msg); return; }
+    const k = queue.shift();
+    try {
+      const r = anonymizeQuiet(Object.assign({}, state.result.cfg, {k}));
+      out.push({k, loss: r.after.utility.totalLoss, atRisk: r.after.k.atRiskPct,
+                minL: r.saCols.length ? r.after.l.overallMin : null, ok: r.after.k.ok,
+                supp: r.after.suppressPct, classes: r.after.nGroups, minSize: r.after.k.min});
+    } catch(e){}
+    msg.innerHTML = 'Sweeping… <b>' + (uniq.length - queue.length) + ' / ' + uniq.length +
+      '</b> (k = ' + k + ' done). Each point re-runs the whole pipeline, so this takes a moment on large tables.';
+    setTimeout(step, 0);
+  };
+  setTimeout(step, 0);
+}
+function drawSweep(out, uniq, t0, msg){
+  if (!out.length){ msg.textContent = 'Sweep produced no results.'; return; }
+  msg.innerHTML = 'Swept k = ' + uniq.join(', ') + ' in ' + ((performance.now()-t0)/1000).toFixed(1) +
+    's, holding the l, t and method settings fixed. Every point re-runs the full pipeline — this is the privacy / utility trade-off you are buying.';
+  const chart1 = '<div class="chart"><div class="ct">Information loss vs. k</div><div class="cs">the cost of privacy: push k right, utility falls</div>' +
+    svgLineChart([{color:'#ff6b81', points: out.map(o=>({x:o.k, y:o.loss}))}], {xlabel:'k', ymin:0, ymax:1}) + '</div>';
+  const chart2 = '<div class="chart"><div class="ct">Records left in a class smaller than k</div><div class="cs">must be 0 everywhere, otherwise the release leaks</div>' +
+    svgLineChart([{color:'#ffb454', points: out.map(o=>({x:o.k, y:o.atRisk*100}))}], {xlabel:'k', ymin:0, hline:0, hlabel:'0 %'}) + '</div>';
+  let tbl = '<div class="chart" style="grid-column:1/-1"><div class="ct">Sweep results</div><div class="tscroll" style="max-height:300px"><table><thead><tr>' +
+    '<th>k</th><th>k-anonymous?</th><th>achieved min class size</th><th>info loss</th><th>rows at risk</th><th>suppressed</th><th>equivalence classes</th></tr></thead><tbody>';
+  for (const o of out){
+    tbl += '<tr><td class="num">'+o.k+'</td><td>'+(o.ok?'<span class="badge-v v-ok">yes</span>':'<span class="badge-v v-bad">no</span>')+
+      '</td><td class="num">'+o.minSize+'</td><td class="num">'+pctf(o.loss)+'</td><td class="num">'+pctf(o.atRisk)+
+      '</td><td class="num">'+pctf(o.supp)+'</td><td class="num">'+o.classes.toLocaleString()+'</td></tr>';
+  }
+  tbl += '</tbody></table></div>'+
+    '<div class="hint">Pick the smallest k on this curve whose information loss you can live with — that is the whole privacy / utility decision in one table.</div>';
+  $('#sweepOut').innerHTML = chart1 + chart2 + tbl;
+  state.sweep = out;
+}
+function anonymizeQuiet(cfg){
+  const save = state.log;
+  const r = anonymize(cfg);
+  state.log = save;
+  return r;
+}
+
+/* ---------------- sample data ---------------- */
+function sampleCSV(){
+  const rnd = mulberry(20240917);
+  const edu = ['Preschool','Primary','Middle-school','High-school','Some-college','Bachelors','Masters','Doctorate','Prof-school'];
+  const mar = ['Never-married','Married','Divorced','Separated','Widowed'];
+  const occ = ['Tech-support','Craft-repair','Sales','Exec-managerial','Prof-specialty','Handlers-cleaners','Adm-clerical','Farming-fishing','Machine-op','Transport-moving'];
+  const race = ['White','Black','Asian-Pac-Islander','Amer-Indian-Eskimo','Other'];
+  const lines = ['age,zipcode,education,marital_status,occupation,race,sex,hours_per_week,capital_gain,diagnosis'];
+  const N = 600;
+  const zips = [1004,1015,1023,2001,2015,2023,3007,3021,3035,4050];
+  for (let i=0;i<N;i++){
+    const age = 17 + Math.floor(rnd()*58);
+    const zip = zips[Math.floor(rnd()*zips.length)];
+    const e = edu[Math.min(edu.length-1, Math.floor((age-17)/58*edu.length*0.85 + rnd()*2))];
+    const o = occ[Math.floor(Math.pow(rnd(),1.3)*occ.length)];
+    const m = mar[Math.floor(rnd()*mar.length)];
+    const r = race[Math.floor(Math.pow(rnd(),1.4)*race.length)];
+    const sex = rnd()<0.48 ? 'Male' : 'Female';
+    const hrs = 20 + Math.floor(rnd()*45);
+    const cg = rnd()<0.16 ? Math.floor(1000+rnd()*20000) : 0;
+    let dx;
+    const pr = rnd();
+    if (e === 'Primary' || e === 'Preschool') dx = pr<0.55 ? 'Flu' : pr<0.8 ? 'Asthma' : pr<0.93 ? 'Diabetes' : 'Cancer';
+    else if (age > 55) dx = pr<0.3 ? 'Flu' : pr<0.6 ? 'Arthritis' : pr<0.85 ? 'Diabetes' : 'Cancer';
+    else dx = pr<0.6 ? 'Flu' : pr<0.82 ? 'Allergy' : pr<0.95 ? 'Arthritis' : 'Cancer';
+    lines.push([age, zip, e, m, o, r, sex, hrs, cg, dx].join(','));
+  }
+  return lines.join('\n');
+}
+function mulberry(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0;
+  let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------------- wiring ---------------- */
+function readCfg(){
+  return {
+    k: clamp(parseInt($('#k').value,10) || 1, 1, 10000),
+    l: clamp(parseInt($('#l').value,10) || 1, 1, 10000),
+    t: clamp(parseFloat($('#t').value) || 0, 0, 1),
+    method: $('#method').value,
+    suppress: $('#doSuppress').checked,
+    doL: $('#doL').checked,
+    suppressL: $('#doSuppressL').checked,
+    doT: $('#doT').checked
+  };
+}
+/* ---------------- shareable settings (URL hash) ---------------- */
+function encodeSettings(){
+  const cfg = readCfg(), p = new URLSearchParams();
+  p.set('k', cfg.k); p.set('l', cfg.l); p.set('t', cfg.t);
+  p.set('m', cfg.method); p.set('d', $('#tMetric').value);
+  p.set('lv', $('#levels').value); p.set('mc', $('#maxCat').value);
+  p.set('sup', cfg.suppress ? 1 : 0); p.set('supL', cfg.suppressL ? 1 : 0);
+  p.set('doL', cfg.doL ? 1 : 0); p.set('doT', cfg.doT ? 1 : 0);
+  if (state.nrows){
+    p.set('qi', JSON.stringify(qiCols()));
+    p.set('sa', JSON.stringify(sas()));
+    p.set('hdr', $('#hasHeader').value);
+  }
+  return p.toString();
+}
+function setField(sel, v){
+  const el = $(sel);
+  if (el && v !== null && v !== undefined && String(v) !== '') el.value = String(v);
+}
+function numField(sel, raw, lo, hi, fallback){
+  const v = Number(raw);
+  if (raw === null || raw === '' || !isFinite(v) || v < lo || v > hi) return fallback;
+  return v;
+}
+function applySettingsHash(hash){
+  let p;
+  try { p = new URLSearchParams(String(hash || '').replace(/^#/, '')); }
+  catch(e){ return false; }
+  if (!p.get('k')) return false;
+  const cur = readCfg();
+  setField('#k', numField('#k', p.get('k'), 1, 10000, cur.k));
+  setField('#l', numField('#l', p.get('l'), 1, 10000, cur.l));
+  setField('#t', numField('#t', p.get('t'), 0, 1, cur.t));
+  setField('#levels', numField('#levels', p.get('lv'), 2, 10, +$('#levels').value || 7));
+  setField('#maxCat', numField('#maxCat', p.get('mc'), 1, 12, +$('#maxCat').value || 4));
+  const m = p.get('m'), d = p.get('d');
+  if (m && ['generalization','mondrian','hybrid'].indexOf(m) >= 0) $('#method').value = m;
+  if (d && ['hierarchy','emd','tv'].indexOf(d) >= 0) $('#tMetric').value = d;
+  if (p.get('sup') !== null) $('#doSuppress').checked = p.get('sup') === '1';
+  if (p.get('supL') !== null) $('#doSuppressL').checked = p.get('supL') === '1';
+  if (p.get('doL') !== null) $('#doL').checked = p.get('doL') === '1';
+  if (p.get('doT') !== null) $('#doT').checked = p.get('doT') === '1';
+  setField('#hasHeader', p.get('hdr') === '0' ? '0' : '1');
+  let roles = null;
+  if (p.get('qi') || p.get('sa')){
+    try {
+      const qi = JSON.parse(p.get('qi') || '[]'), sa = JSON.parse(p.get('sa') || '[]');
+      if (Array.isArray(qi) && Array.isArray(sa)) roles = {qi, sa};
+    } catch(e){ roles = null; }
+  }
+  state.pendingRoles = roles;
+  try { $('#tMetric').dispatchEvent(new Event('change')); } catch(e){}
+  return true;
+}
+function copySettingsLink(){
+  const frag = encodeSettings();
+  const url = location.origin + location.pathname + (location.search || '') + '#' + frag;
+  try { history.replaceState(null, '', '#' + frag); } catch(e){}
+  const box = $('#linkBox');
+  box.style.display = 'block';
+  box.innerHTML = 'Settings are now in the address bar. ' +
+    '<input type="text" readonly value="' + esc(url) + '" style="margin-top:6px;font-family:var(--mono);font-size:11.5px">';
+  const input = box.querySelector('input');
+  if (input){ input.focus(); input.select(); }
+  const done = () => { box.innerHTML = 'Link copied to the clipboard — it carries the k / l / t budget, the algorithm and the column roles, so anyone can reproduce this exact configuration. <span class="hint" style="display:inline">(the dataset itself is never part of the link)</span>'; };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done, () => {});
+  } else {
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch(e){}
+    if (ok) done();
+  }
+}
+function doRun(){
+  let cfg;
+  try { cfg = readCfg(); }
+  catch(e){
+    $('#results').innerHTML = '<div class="panel"><div class="note warnbox"><b>Cannot start:</b> '+esc(e.message)+'</div></div>';
+    return;
+  }
+  const heavy = state.nrows > 12000;
+  $('#results').innerHTML = '<div class="panel"><div class="note">' + busy +
+    'Anonymizing ' + state.nrows.toLocaleString() + ' rows on ' + qis().length + ' quasi-identifier(s)' +
+    (sas().length ? ' and ' + sas().length + ' sensitive attribute(s)' : '') + '…' +
+    (heavy ? '<br>This runs entirely in your browser. Tens of thousands of rows take a few seconds — the tab will be unresponsive while it works.' : '') +
+    '</div></div>';
+  setTimeout(()=>{
+    try {
+      state.result = anonymize(cfg);
+      render();
+      $('#report').scrollIntoView({behavior:'smooth', block:'start'});
+    } catch(e){
+      $('#results').innerHTML = '<div class="panel"><div class="note warnbox"><b>Failed:</b> '+esc(e.message)+
+        '<br><span class="hint">'+esc((e.stack||'').split('\n')[1] || '')+'</span></div></div>';
+      console.error(e);
+    }
+  }, 30);
+}
+$('#drop').onclick = () => $('#file').click();
+$('#file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { setData(parseCSV(String(rd.result)), $('#hasHeader').value === '1'); };
+  rd.readAsText(f);
+};
+['dragover','dragenter'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.add('over'); }));
+['dragleave','drop'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.remove('over'); }));
+$('#drop').addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { setData(parseCSV(String(rd.result)), $('#hasHeader').value === '1'); };
+  rd.readAsText(f);
+});
+$('#btnPaste').onclick = () => {
+  const t = $('#paste').value.trim();
+  if (!t) return;
+  setData(parseCSV(t), $('#hasHeader').value === '1');
+};
+$('#btnSample').onclick = () => {
+  const csv = sampleCSV();
+  $('#paste').value = csv.split('\n').slice(0,12).join('\n') + '\n…';
+  setData(parseCSV(csv), true);
+  setTimeout(() => {
+    ['age','zipcode','education','marital_status','occupation'].forEach(c => { if (state.roles[c] !== undefined) state.roles[c] = 'qi'; });
+    ['diagnosis'].forEach(c => { if (state.roles[c] !== undefined) state.roles[c] = 'sa'; });
+    ['sex','race','capital_gain','hours_per_week'].forEach(c => { if (state.roles[c] !== undefined) state.roles[c] = 'ignore'; });
+    renderColumns(); syncDirty();
+  }, 10);
+};
+$('#btnClear').onclick = () => location.reload();
+$('#colTable').addEventListener('click', e => {
+  const b = e.target.closest('button[data-role]'); if (!b) return;
+  state.roles[b.dataset.col] = b.dataset.role;
+  renderColumns(); syncDirty();
+});
+$('#colTable').addEventListener('change', e => {
+  const sel = e.target.closest('select[data-type]'); if (!sel) return;
+  state.types[sel.dataset.type] = sel.value;
+  renderColumns(); syncDirty();
+});
+Array.prototype.forEach.call(document.querySelectorAll('[data-guess]'), b => {
+  b.onclick = () => {
+    const g = b.dataset.guess;
+    state.headers.forEach(h => state.roles[h] = 'ignore');
+    if (g === 'adult'){
+      ['age','zipcode','sex','marital_status','occupation','education','race','hours_per_week','capital_gain','income','native_country','relationship']
+        .forEach(c => { if (state.roles[c] !== undefined) state.roles[c] = 'qi'; });
+      ['income','diagnosis','salary','disease','class','savings','age_group'].forEach(c => { if (state.roles[c] !== undefined) state.roles[c] = 'sa'; });
+      if (qis().length < 1 || sas().length < 1){
+        const cand = state.headers.filter(h => state.types[h] === 'numeric');
+        if (cand.length > 1) state.roles[cand[0]] = 'qi';
+        const rest = state.headers.filter(h => state.roles[h] === 'ignore');
+        if (rest.length) state.roles[rest[rest.length-1]] = 'sa';
+      }
+    } else if (g === 'allsa'){
+      state.headers.forEach(h => state.roles[h] = 'sa');
+    }
+    renderColumns(); syncDirty();
+  };
+});
+$('#btnRun').onclick = doRun;
+$('#btnLink').onclick = copySettingsLink;
+$('#btnSweep').onclick = () => { if(!state.result) doRun(); setTimeout(runSweep, 50); };
+(function boot(){
+  try {
+    const restored = applySettingsHash(location.hash);
+    if (restored){
+      state.restored = true;
+      $('#ingestInfo').innerHTML = 'Settings restored from the link: <b>k=' + $('#k').value + ', l=' + $('#l').value +
+        ', t=' + $('#t').value + '</b>' + (state.pendingRoles ? ' and the saved column roles' : '') +
+        '. Load a dataset to apply them.';
+    }
+    window.addEventListener('hashchange', () => {
+      if (location.hash.length > 1) applySettingsHash(location.hash);
+    });
+  } catch(e){ console.warn('could not restore settings from the URL', e); }
+})();
+$('#tMetric').onchange = () => {
+  const h = $('#tMetricHint');
+  h.textContent = $('#tMetric').value === 'emd'
+    ? 'EMD sums |cumulative class distribution − cumulative global distribution| across the sorted domain. Valid for ordered attributes.'
+    : $('#tMetric').value === 'tv'
+      ? 'Total variation = ½ Σ |p − q| over every distinct value. Order-insensitive but stricter for skewed categories.'
+      : 'Hierarchy distance is domain-agnostic and works for categorical and numeric attributes.';
+};
+</script>
+</body>
+</html>
